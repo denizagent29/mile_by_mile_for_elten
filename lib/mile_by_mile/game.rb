@@ -97,8 +97,9 @@ module MileByMile
       case hazard_type
       when :turned_back
         return discard_wasted(player, card) unless car.reversed?
+        return discard_wasted(player, card) unless car.running?
 
-        car.apply_remedy!(card.type) # бросит RuleViolation если машина не заведена
+        car.apply_remedy!(card.type)
         discard_played(player, card)
       when :stall
         return discard_wasted(player, card) if car.running?
@@ -133,7 +134,7 @@ module MileByMile
 
       case card.type
       when :stall
-        raise RuleViolation, 'мотор уже заглушен' unless tcar.running?
+        return discard_wasted(player, card) unless tcar.running?
       when :empty_tank, :flat_tire
         return discard_wasted(player, card) if tcar.stalled_by?(card.type)
       when :speed_limit

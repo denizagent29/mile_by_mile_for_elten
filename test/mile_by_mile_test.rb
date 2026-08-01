@@ -110,4 +110,35 @@ class MileByMileTest < Minitest::Test
     team = Team.new('Джаз-бэнд', %w[Deniz Ludub])
     assert_same team.players[0].car, team.players[1].car
   end
+
+  def test_stall_on_already_stopped_car_wastes_not_raises
+    stall = HazardCard.new(:stall)
+    @p2.hand << stall
+    @game.instance_variable_set(:@current_index, 1) # ход у p2
+    # p1's car уже не заведена (стартовое состояние) — раньше тут падало исключение
+    @game.play(stall, target: @p1)
+    assert_equal @p1, @game.current_player
+  end
+
+  def test_turn_forward_while_stalled_wastes_not_raises
+    start = RemedyCard.new(:start)
+    @p1.hand << start
+    @game.play(start) # p1 заведена, ход у p2
+
+    turned = HazardCard.new(:turned_back)
+    @p2.hand << turned
+    @game.play(turned, target: @p1) # p1 развёрнута, ход у p1
+
+    flat = HazardCard.new(:flat_tire)
+    @p1.hand << flat
+    # тайком глушим свою же машину для теста: играем прокол на себя невозможно,
+    # эмулируем состояние напрямую
+    @p1.car.apply_hazard!(:flat_tire)
+
+    turn_forward = RemedyCard.new(:turn_forward)
+    @p1.hand << turn_forward
+    # раньше здесь падало исключение вместо ухода карты в отбой
+    @game.play(turn_forward)
+    assert @p1.car.reversed?
+  end
 end
