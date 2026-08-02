@@ -2,29 +2,29 @@
 
 module MileByMile
   module Variants
-    # Разновидность «На лошадях». Правила идентичны, отличаются только
-    # названия части карточек (см. таблицу соответствий в правилах).
-    # Карточки, не указанные в таблице, полностью совпадают с оригиналом.
+    # "Horses" variant. Rules are identical, only some card names differ
+    # (see the correspondence table in the rules). Cards not listed there
+    # match the original exactly.
     class HorseDeck < Deck
       HAZARD_NAMES = {
-        stall: 'Скинуть с седла',
-        empty_tank: 'Голод',
-        flat_tire: 'Сбить подкову',
-        accident: 'Усталость'
+        stall: 'Thrown from the saddle',
+        empty_tank: 'Hunger',
+        flat_tire: 'Lost horseshoe',
+        accident: 'Exhaustion'
       }.freeze
 
       REMEDY_NAMES = {
-        start: 'Оседлать',
-        refuel: 'Покормить',
-        repair_tire: 'Подковать',
-        repair: 'Отдых'
+        start: 'Saddle up',
+        refuel: 'Feed',
+        repair_tire: 'Shoe the horse',
+        repair: 'Rest'
       }.freeze
 
       SAFETY_NAMES = {
-        stall: 'Защита от падений с седла',
-        empty_tank: 'Защита от голода',
-        flat_tire: 'Защита от потери подковы',
-        accident: 'Защита от усталости'
+        stall: 'Saddle immunity',
+        empty_tank: 'Hunger immunity',
+        flat_tire: 'Horseshoe immunity',
+        accident: 'Exhaustion immunity'
       }.freeze
 
       private

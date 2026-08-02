@@ -1,0 +1,212 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: MileByMile 1.0\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pl\n"
+
+msgid "Mile by Mile"
+msgstr "Mila po mili"
+
+msgid "Play against the bot"
+msgstr "Zagraj z botem"
+
+msgid "Rules"
+msgstr "Zasady"
+
+msgid "Exit"
+msgstr "Wyjście"
+
+msgid "Choose a card set"
+msgstr "Wybierz zestaw kart"
+
+msgid "Cars"
+msgstr "Samochody"
+
+msgid "Horses"
+msgstr "Konie"
+
+msgid "Choose the distance"
+msgstr "Wybierz dystans"
+
+msgid "%{d} miles"
+msgstr "%{d} mil"
+
+msgid "The game has started. Distance: %{d} miles."
+msgstr "Gra się rozpoczęła. Dystans: %{d} mil."
+
+msgid "Your turn"
+msgstr "Twoja kolej"
+
+msgid "Your turn."
+msgstr "Twoja kolej."
+
+msgid "You"
+msgstr "Ty"
+
+msgid "Bot"
+msgstr "Bot"
+
+msgid "running"
+msgstr "na chodzie"
+
+msgid "not started"
+msgstr "niezapalony silnik"
+
+msgid "turned around"
+msgstr "zawrócony"
+
+msgid "speed limited"
+msgstr "ograniczenie prędkości"
+
+msgid "%{player} moved %{miles} miles."
+msgstr "%{player} przejechał %{miles} mil."
+
+msgid "%{player} played: %{card}."
+msgstr "%{player} zagrał: %{card}."
+
+msgid "You drew %{card}."
+msgstr "Dobrałeś: %{card}."
+
+msgid "You won! The distance is covered."
+msgstr "Wygrałeś! Dystans pokonany."
+
+msgid "The bot won. Better luck next time."
+msgstr "Bot wygrał. Powodzenia następnym razem."
+
+msgid "The deck ran out. Draw."
+msgstr "Talia się skończyła. Remis."
+
+msgid "The goal is to be the first to cover the target distance exactly, without overshooting."
+msgstr "Celem jest jako pierwszy pokonać zadany dystans dokładnie, bez przekroczenia."
+
+msgid "Distance cards (25/50/75/100/200 miles) move you forward once your car is started and nothing blocks it."
+msgstr "Karty dystansu (25/50/75/100/200 mil) przesuwają cię do przodu, gdy silnik jest uruchomiony i nic nie przeszkadza."
+
+msgid "Hazard cards are played against an opponent: stall the engine, empty the tank, flat tire, accident, U-turn, speed limit, skip a turn."
+msgstr "Karty szkodzące gra się przeciwko przeciwnikowi: zgaśnięcie silnika, opróżnienie baku, przebicie opony, wypadek, zawracanie, ograniczenie prędkości, pominięcie kolejki."
+
+msgid "Remedy cards fix your own car: start the engine, refuel, fix the tire, repair after accident, end of U-turn, end of speed limit."
+msgstr "Karty naprawcze naprawiają twój samochód: uruchomienie silnika, tankowanie, naprawa opony, naprawa po wypadku, koniec zawracania, koniec ograniczenia prędkości."
+
+msgid "Safety cards are played on yourself once and permanently block one kind of hazard. Playing one for the first time keeps your turn."
+msgstr "Karty ochronne wykłada się na siebie raz i na stałe blokują jeden rodzaj zagrożenia. Zagranie takiej karty po raz pierwszy zachowuje twoją kolejkę."
+
+msgid "If a card can't take effect (for example, refueling a full tank), it is simply discarded and the turn passes on."
+msgstr "Jeśli karta nie może zadziałać (na przykład tankujesz pełny bak), po prostu trafia na stos odrzuconych, a kolejka przechodzi dalej."
+
+msgid "25 miles"
+msgstr "25 mil"
+
+msgid "50 miles"
+msgstr "50 mil"
+
+msgid "75 miles"
+msgstr "75 mil"
+
+msgid "100 miles"
+msgstr "100 mil"
+
+msgid "200 miles"
+msgstr "200 mil"
+
+msgid "Stall the engine"
+msgstr "Zgaś silnik"
+
+msgid "Empty the tank"
+msgstr "Opróżnij bak"
+
+msgid "Flat tire"
+msgstr "Przebita opona"
+
+msgid "Accident"
+msgstr "Wypadek"
+
+msgid "U-turn"
+msgstr "Zawróć"
+
+msgid "Speed limit"
+msgstr "Ograniczenie prędkości"
+
+msgid "Skip a turn"
+msgstr "Pomiń kolejkę"
+
+msgid "Start the engine"
+msgstr "Uruchom silnik"
+
+msgid "Refuel"
+msgstr "Zatankuj"
+
+msgid "Fix the tire"
+msgstr "Napraw oponę"
+
+msgid "Repair after accident"
+msgstr "Napraw po wypadku"
+
+msgid "End of U-turn"
+msgstr "Koniec zawracania"
+
+msgid "End of speed limit"
+msgstr "Koniec ograniczenia prędkości"
+
+msgid "Engine immunity"
+msgstr "Odporność na zgaśnięcie silnika"
+
+msgid "Fuel immunity"
+msgstr "Odporność na opróżnienie baku"
+
+msgid "Tire immunity"
+msgstr "Odporność na przebicie opony"
+
+msgid "Accident immunity"
+msgstr "Odporność na wypadki"
+
+msgid "U-turn immunity"
+msgstr "Odporność na zawracanie"
+
+msgid "Speed limit immunity"
+msgstr "Odporność na ograniczenie prędkości"
+
+msgid "Turn-skip immunity"
+msgstr "Odporność na pominięcie kolejki"
+
+msgid "Strip all immunities"
+msgstr "Zdejmij wszystkie odporności"
+
+msgid "Thrown from the saddle"
+msgstr "Zrzucenie z siodła"
+
+msgid "Hunger"
+msgstr "Głód"
+
+msgid "Lost horseshoe"
+msgstr "Zgubiona podkowa"
+
+msgid "Exhaustion"
+msgstr "Wyczerpanie"
+
+msgid "Saddle up"
+msgstr "Osiodłaj"
+
+msgid "Feed"
+msgstr "Nakarm"
+
+msgid "Shoe the horse"
+msgstr "Podkuj konia"
+
+msgid "Rest"
+msgstr "Odpoczynek"
+
+msgid "Saddle immunity"
+msgstr "Odporność na upadek z siodła"
+
+msgid "Hunger immunity"
+msgstr "Odporność na głód"
+
+msgid "Horseshoe immunity"
+msgstr "Odporność na utratę podkowy"
+
+msgid "Exhaustion immunity"
+msgstr "Odporność na wyczerpanie"
+

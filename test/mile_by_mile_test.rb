@@ -106,9 +106,9 @@ class MileByMileTest < Minitest::Test
       c = deck.draw
       names << c.name
     end
-    assert_includes names, 'Оседлать'
-    assert_includes names, 'Скинуть с седла'
-    assert_includes names, 'Защита от голода'
+    assert_includes names, 'Saddle up'
+    assert_includes names, 'Thrown from the saddle'
+    assert_includes names, 'Hunger immunity'
   end
 
   def test_team_shares_car

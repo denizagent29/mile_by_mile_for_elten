@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 module MileByMile
-  # Опциональная карточка «Снять все защиты». Играется на соперника.
+  # Optional "strip all immunities" card. Played against an opponent.
   class RemoveAllSafetiesCard < Card
     def initialize
-      super('Снять все защиты')
+      super('Strip all immunities')
     end
 
     def opponent_only?

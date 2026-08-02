@@ -7,12 +7,12 @@ module MileByMile
 
     attr_reader :players, :deck, :discard_pile, :distance_target, :current_index
 
-    def initialize(players, distance_target: 1000, include_remove_all_safeties: false)
-      raise ArgumentError, 'нужно минимум 2 игрока' if players.size < 2
+    def initialize(players, distance_target: 1000, include_remove_all_safeties: false, deck_class: Deck)
+      raise ArgumentError, 'need at least 2 players' if players.size < 2
 
       @players = players
       @distance_target = distance_target
-      @deck = Deck.new(include_remove_all_safeties: include_remove_all_safeties).shuffle!
+      @deck = deck_class.new(include_remove_all_safeties: include_remove_all_safeties).shuffle!
       @discard_pile = []
       @deck.deal(@players, 6)
       @current_index = rand(@players.size)
@@ -33,12 +33,12 @@ module MileByMile
     # card   — карта из руки текущего игрока
     # target — игрок-цель, обязателен для HazardCard и RemoveAllSafetiesCard
     def play(card, target: nil)
-      raise RuleViolation, 'игра окончена' if finished?
+      raise RuleViolation, 'the game is over' if finished?
 
       player = current_player
-      raise RuleViolation, 'этой карты нет в руке' unless player.has_card?(card)
-      raise RuleViolation, 'нельзя играть карту вредительства на себя' if card.opponent_only? && target == player
-      raise RuleViolation, 'эта карта играется только на себя' if card.self_only? && !target.nil? && target != player
+      raise RuleViolation, 'this card is not in hand' unless player.has_card?(card)
+      raise RuleViolation, 'a hazard card cannot be played on yourself' if card.opponent_only? && target == player
+      raise RuleViolation, 'this card can only be played on yourself' if card.self_only? && !target.nil? && target != player
 
       case card
       when DistanceCard then play_distance(player, card)
@@ -47,7 +47,7 @@ module MileByMile
       when RemoveAllSafetiesCard then play_remove_all_safeties(player, card, target)
       when HazardCard then play_hazard(player, card, target)
       else
-        raise RuleViolation, "неизвестный тип карты: #{card.class}"
+        raise RuleViolation, "unknown card type: #{card.class}"
       end
     end
 
@@ -126,8 +126,8 @@ module MileByMile
     end
 
     def play_hazard(player, card, target)
-      raise RuleViolation, 'для карты вредительства нужна цель' unless target
-      raise RuleViolation, 'такого игрока нет в партии' unless players.include?(target)
+      raise RuleViolation, 'a hazard card needs a target' unless target
+      raise RuleViolation, 'no such player in this game' unless players.include?(target)
 
       tcar = target.car
       return discard_wasted(player, card) if tcar.safety?(card.type)
@@ -150,8 +150,8 @@ module MileByMile
     end
 
     def play_remove_all_safeties(player, card, target)
-      raise RuleViolation, 'нужна цель' unless target
-      raise RuleViolation, 'такого игрока нет в партии' unless players.include?(target)
+      raise RuleViolation, 'a target is required' unless target
+      raise RuleViolation, 'no such player in this game' unless players.include?(target)
 
       target.car.clear_safeties!
       discard_played(player, card)

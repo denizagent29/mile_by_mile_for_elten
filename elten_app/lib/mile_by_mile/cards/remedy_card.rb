@@ -1,20 +1,20 @@
 # frozen_string_literal: true
 
 module MileByMile
-  # Карточка противодействия вредительству. Играется только на себя.
+  # Remedy card. Can only be played on yourself.
   class RemedyCard < Card
     TYPES = %i[start refuel repair_tire repair turn_forward remove_speed_limit].freeze
 
     NAMES = {
-      start: 'Завестись',
-      refuel: 'Налить бензин',
-      repair_tire: 'Накачать колесо',
-      repair: 'Починиться после аварии',
-      turn_forward: 'Развернуться вперёд',
-      remove_speed_limit: 'Убрать ограничение скорости'
+      start: 'Start the engine',
+      refuel: 'Refuel',
+      repair_tire: 'Fix the tire',
+      repair: 'Repair after accident',
+      turn_forward: 'End of U-turn',
+      remove_speed_limit: 'End of speed limit'
     }.freeze
 
-    # какой тип вредительства лечит эта карточка
+    # which hazard type this remedy cures
     CURES = {
       start: :stall,
       refuel: :empty_tank,
@@ -27,7 +27,7 @@ module MileByMile
     attr_reader :type
 
     def initialize(type, name: nil)
-      raise ArgumentError, "неизвестный тип противодействия: #{type}" unless TYPES.include?(type)
+      raise ArgumentError, "unknown remedy type: #{type}" unless TYPES.include?(type)
 
       super(name || NAMES.fetch(type))
       @type = type

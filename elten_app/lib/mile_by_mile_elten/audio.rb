@@ -1,69 +1,79 @@
 # frozen_string_literal: true
 
 module MileByMileElten
-  # Обёртка над play_app_sound. Имена звуковых файлов ниже — контракт с
-  # набором звуков, который будет добавлен в audio/ ассеты приложения:
-  #   start.ogg, distance.ogg, remedy.ogg, safety.ogg,
-  #   hazard_stall.ogg, hazard_empty_tank.ogg, hazard_flat_tire.ogg,
-  #   hazard_accident.ogg, hazard_turned_back.ogg, hazard_speed_limit.ogg,
-  #   hazard_skip_turn.ogg, remove_all_safeties.ogg, wasted.ogg,
-  #   your_turn.ogg, bot_turn.ogg, win.ogg, lose.ogg, draw.ogg
+  # Обёртка над play_app_sound. Ассеты лежат плоско в elten_app/audio/
+  # (Elten грузит только верхний уровень папки Audio, без подпапок — см.
+  # collect_physical_sound_assets/add_sound_asset в elten3, оба используют
+  # File.basename без директории как ключ поиска). Поэтому все файлы
+  # переименованы в плоские уникальные имена по схеме:
+  #   <variant>_<0|25|50|75|100|200>   — озвучка карт движения
+  #   <variant>_bibip                  — старт мотора
+  #   <variant>_welcome                — начало партии/раунда
+  #   <variant>_fail_<key>             — вредительство применилось к цели
+  #   <variant>_success_<key>          — противодействие сработало
+  #   prot_<key>                       — защита выставлена (общая для всех вариантов)
+  #   wow                              — победа (общая)
+  # variant: cars | horses
+  # key:     ready(stall) tank(empty_tank) tire(flat_tire) wheel(turned_back)
+  #          seat(accident) speed(speed_limit) pass(skip_turn)
   class Audio
     include MileByMile
 
-    SOUND_FOR_HAZARD = {
-      stall: 'hazard_stall',
-      empty_tank: 'hazard_empty_tank',
-      flat_tire: 'hazard_flat_tire',
-      accident: 'hazard_accident',
-      turned_back: 'hazard_turned_back',
-      speed_limit: 'hazard_speed_limit',
-      skip_turn: 'hazard_skip_turn'
+    SOUND_KEY = {
+      stall: 'ready',
+      empty_tank: 'tank',
+      flat_tire: 'tire',
+      turned_back: 'wheel',
+      accident: 'seat',
+      speed_limit: 'speed',
+      skip_turn: 'pass'
     }.freeze
 
-    def initialize(program)
+    attr_accessor :variant
+
+    def initialize(program, variant: :cars)
       @program = program
+      @variant = variant
     end
 
-    def play(name, volume: 100, pan: 50)
-      @program.play_app_sound(name.to_s, volume: volume, pan: pan)
+    def play(name, volume: 100, pan: 50, pitch: 100)
+      return false if name.nil?
+
+      @program.play_app_sound(name.to_s, volume: volume, pan: pan, pitch: pitch)
     rescue Exception => e
       Log.warning("MileByMile sound #{name} failed: #{e.class}: #{e.message}") if defined?(Log)
       false
     end
 
+    def welcome
+      play("#{@variant}_welcome")
+    end
+
+    # звук проигрывается при розыгрыше карты игроком/ботом (по центру)
     def card_played(card)
-      case card
-      when DistanceCard then play('distance')
-      when RemedyCard then play('remedy')
-      when SafetyCard then play('safety')
-      when HazardCard then play(SOUND_FOR_HAZARD.fetch(card.type, 'hazard_stall'))
-      when RemoveAllSafetiesCard then play('remove_all_safeties')
-      end
+      play(sound_name_for(card))
     end
 
-    def wasted
-      play('wasted')
-    end
-
-    def your_turn
-      play('your_turn')
-    end
-
-    def bot_turn
-      play('bot_turn')
+    # тот же звук, что и card_played, но с панорамой вправо — по просьбе:
+    # взятие карты перед ходом звучит будто тянешь её из колоды справа
+    def card_drawn(card)
+      play(sound_name_for(card), pan: 82, volume: 70)
     end
 
     def win
-      play('win')
+      play('wow')
     end
 
-    def lose
-      play('lose')
-    end
+    private
 
-    def draw
-      play('draw')
+    def sound_name_for(card)
+      case card
+      when DistanceCard then "#{@variant}_#{card.miles}"
+      when HazardCard then "#{@variant}_fail_#{SOUND_KEY.fetch(card.type, 'ready')}"
+      when RemedyCard then "#{@variant}_success_#{SOUND_KEY.fetch(card.cures, 'ready')}"
+      when SafetyCard then "prot_#{SOUND_KEY.fetch(card.type, 'ready')}"
+      when RemoveAllSafetiesCard then "#{@variant}_bibip"
+      end
     end
   end
 end

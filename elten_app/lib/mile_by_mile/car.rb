@@ -87,7 +87,7 @@ module MileByMile
         @active_hazards.delete(:accident)
         @running = true
       when :turn_forward
-        raise RuleViolation, 'сначала нужно наладить и завести машину' unless running?
+        raise RuleViolation, 'the car must be repaired and started first' unless running?
 
         @reversed = false
       when :remove_speed_limit
@@ -98,8 +98,8 @@ module MileByMile
     end
 
     def move!(miles)
-      raise RuleViolation, 'машина не может двигаться' unless moving?
-      raise RuleViolation, 'ограничение скорости: можно только 25 или 50 миль' if speed_limited? && miles > 50
+      raise RuleViolation, 'the car cannot move' unless moving?
+      raise RuleViolation, 'speed limit: only 25 or 50 miles allowed' if speed_limited? && miles > 50
 
       @distance = reversed? ? [@distance - miles, 0].max : @distance + miles
     end

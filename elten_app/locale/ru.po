@@ -1,0 +1,212 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: MileByMile 1.0\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ru\n"
+
+msgid "Mile by Mile"
+msgstr "Миля за милей"
+
+msgid "Play against the bot"
+msgstr "Играть с ботом"
+
+msgid "Rules"
+msgstr "Правила"
+
+msgid "Exit"
+msgstr "Выход"
+
+msgid "Choose a card set"
+msgstr "Выберите набор карт"
+
+msgid "Cars"
+msgstr "Машины"
+
+msgid "Horses"
+msgstr "Лошади"
+
+msgid "Choose the distance"
+msgstr "Выберите дистанцию"
+
+msgid "%{d} miles"
+msgstr "%{d} миль"
+
+msgid "The game has started. Distance: %{d} miles."
+msgstr "Игра началась. Дистанция: %{d} миль."
+
+msgid "Your turn"
+msgstr "Ваш ход"
+
+msgid "Your turn."
+msgstr "Ваш ход."
+
+msgid "You"
+msgstr "Вы"
+
+msgid "Bot"
+msgstr "Бот"
+
+msgid "running"
+msgstr "на ходу"
+
+msgid "not started"
+msgstr "не заведена"
+
+msgid "turned around"
+msgstr "развёрнута"
+
+msgid "speed limited"
+msgstr "ограничение скорости"
+
+msgid "%{player} moved %{miles} miles."
+msgstr "%{player} проехал %{miles} миль."
+
+msgid "%{player} played: %{card}."
+msgstr "%{player} сыграл: %{card}."
+
+msgid "You drew %{card}."
+msgstr "Вы взяли %{card}."
+
+msgid "You won! The distance is covered."
+msgstr "Вы выиграли! Дистанция пройдена."
+
+msgid "The bot won. Better luck next time."
+msgstr "Бот выиграл. Повезёт в следующий раз."
+
+msgid "The deck ran out. Draw."
+msgstr "Колода закончилась. Ничья."
+
+msgid "The goal is to be the first to cover the target distance exactly, without overshooting."
+msgstr "Цель — первым проехать заданное расстояние ровно, без превышения."
+
+msgid "Distance cards (25/50/75/100/200 miles) move you forward once your car is started and nothing blocks it."
+msgstr "Карты движения (25/50/75/100/200 миль) едут вперёд, если машина заведена и ничего не мешает."
+
+msgid "Hazard cards are played against an opponent: stall the engine, empty the tank, flat tire, accident, U-turn, speed limit, skip a turn."
+msgstr "Карты вредительства играются на соперника: заглушить мотор, слить бензин, проколоть колесо, авария, разворот назад, ограничение скорости, пропуск хода."
+
+msgid "Remedy cards fix your own car: start the engine, refuel, fix the tire, repair after accident, end of U-turn, end of speed limit."
+msgstr "Карты противодействия чинят вашу машину: завестись, налить бензин, накачать колесо, починиться после аварии, конец разворота, снятие ограничения скорости."
+
+msgid "Safety cards are played on yourself once and permanently block one kind of hazard. Playing one for the first time keeps your turn."
+msgstr "Карты защиты ставятся на себя один раз и навсегда блокируют один вид вредительства. Если вы играете такую защиту впервые — ход остаётся у вас."
+
+msgid "If a card can't take effect (for example, refueling a full tank), it is simply discarded and the turn passes on."
+msgstr "Если карта не может подействовать (например, вы наливаете бензин в полный бак), она просто уходит в отбой и ход передаётся дальше."
+
+msgid "25 miles"
+msgstr "25 миль"
+
+msgid "50 miles"
+msgstr "50 миль"
+
+msgid "75 miles"
+msgstr "75 миль"
+
+msgid "100 miles"
+msgstr "100 миль"
+
+msgid "200 miles"
+msgstr "200 миль"
+
+msgid "Stall the engine"
+msgstr "Заглушить мотор"
+
+msgid "Empty the tank"
+msgstr "Слить бензин"
+
+msgid "Flat tire"
+msgstr "Проколоть колесо"
+
+msgid "Accident"
+msgstr "Авария"
+
+msgid "U-turn"
+msgstr "Развернуть назад"
+
+msgid "Speed limit"
+msgstr "Ограничить скорость"
+
+msgid "Skip a turn"
+msgstr "Пропустить ход"
+
+msgid "Start the engine"
+msgstr "Завестись"
+
+msgid "Refuel"
+msgstr "Налить бензин"
+
+msgid "Fix the tire"
+msgstr "Накачать колесо"
+
+msgid "Repair after accident"
+msgstr "Починиться после аварии"
+
+msgid "End of U-turn"
+msgstr "Развернуться вперёд"
+
+msgid "End of speed limit"
+msgstr "Убрать ограничение скорости"
+
+msgid "Engine immunity"
+msgstr "Защита от глушения мотора"
+
+msgid "Fuel immunity"
+msgstr "Защита от слива бензина"
+
+msgid "Tire immunity"
+msgstr "Защита от прокола колёс"
+
+msgid "Accident immunity"
+msgstr "Защита от аварий"
+
+msgid "U-turn immunity"
+msgstr "Защита от разворота"
+
+msgid "Speed limit immunity"
+msgstr "Защита от ограничения скорости"
+
+msgid "Turn-skip immunity"
+msgstr "Защита от пропуска хода"
+
+msgid "Strip all immunities"
+msgstr "Снять все защиты"
+
+msgid "Thrown from the saddle"
+msgstr "Скинуть с седла"
+
+msgid "Hunger"
+msgstr "Голод"
+
+msgid "Lost horseshoe"
+msgstr "Сбить подкову"
+
+msgid "Exhaustion"
+msgstr "Усталость"
+
+msgid "Saddle up"
+msgstr "Оседлать"
+
+msgid "Feed"
+msgstr "Покормить"
+
+msgid "Shoe the horse"
+msgstr "Подковать"
+
+msgid "Rest"
+msgstr "Отдых"
+
+msgid "Saddle immunity"
+msgstr "Защита от падений с седла"
+
+msgid "Hunger immunity"
+msgstr "Защита от голода"
+
+msgid "Horseshoe immunity"
+msgstr "Защита от потери подковы"
+
+msgid "Exhaustion immunity"
+msgstr "Защита от усталости"
+
