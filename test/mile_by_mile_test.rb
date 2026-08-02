@@ -28,7 +28,9 @@ class MileByMileTest < Minitest::Test
   def test_cannot_move_without_start
     card = DistanceCard.new(25)
     @p1.hand << card
-    assert_raises(MileByMile::Car::RuleViolation) { @game.play(card) }
+    @game.play(card) # уходит в отбой, машина не сдвинулась
+    assert_equal 0, @p1.car.distance
+    assert_equal @p2, @game.current_player
   end
 
   def test_start_then_move
@@ -83,7 +85,8 @@ class MileByMileTest < Minitest::Test
 
     d75 = DistanceCard.new(75)
     @p1.hand << d75
-    assert_raises(MileByMile::Car::RuleViolation) { @game.play(d75) }
+    @game.play(d75) # превышение лимита - уходит в отбой, не сдвинулась
+    assert_equal 0, @p1.car.distance
   end
 
   def test_exact_finish_required
@@ -91,7 +94,9 @@ class MileByMileTest < Minitest::Test
     @p1.car.instance_variable_set(:@running, true)
     d75 = DistanceCard.new(75)
     @p1.hand << d75
-    assert_raises(MileByMile::Car::RuleViolation) { @game.play(d75) }
+    @game.play(d75) # 950+75 > 1000, уходит в отбой, машина не сдвинулась
+    assert_equal 950, @p1.car.distance
+    assert_equal @p2, @game.current_player
   end
 
   def test_horse_deck_renames_cards
