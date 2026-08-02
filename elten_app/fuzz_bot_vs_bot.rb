@@ -20,21 +20,21 @@ GAMES.times do |i|
   begin
     until game.finished?
       turns += 1
-      raise 'бесконечная партия' if turns > 5000
+      raise 'infinite game' if turns > 5000
 
       current = game.current_player
       bot = current.equal?(p1) ? bot1 : bot2
       card, target = bot.choose_move
-      break if card.nil? # рука и колода пусты одновременно
+      break if card.nil? # hand and deck are both empty
 
       game.play(card, target: target)
     end
   rescue StandardError => e
     crashes += 1
-    puts "ИГРА ##{i} УПАЛА: #{e.class}: #{e.message}"
+    puts "GAME ##{i} CRASHED: #{e.class}: #{e.message}"
     puts e.backtrace.first(5)
   end
 end
 
-puts "Готово: #{GAMES} игр бот-против-бота, крашей: #{crashes}"
+puts "Done: #{GAMES} bot-vs-bot games, crashes: #{crashes}"
 exit(crashes.zero? ? 0 : 1)

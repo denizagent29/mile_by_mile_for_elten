@@ -1,46 +1,50 @@
 # mile_by_mile_for_elten
 
-Реализация настольной игры «Миля за милей» (Mille Bornes) на Ruby —
-движок для будущего порта в приложение Elten для незрячих.
+A Ruby implementation of the "Mile by Mile" board game (aka Mille Bornes) —
+the engine behind an Elten app for blind users (see `elten_app/`).
 
-## Структура
+## Structure
 
 ```
-lib/mile_by_mile.rb              — точка входа, require всех файлов
-lib/mile_by_mile/card.rb         — базовый класс карты
+lib/mile_by_mile.rb              — entry point, requires all engine files
+lib/mile_by_mile/card.rb         — base card class
 lib/mile_by_mile/cards/
-  distance_card.rb                — карты движения (25/50/75/100/200 миль)
-  hazard_card.rb                  — карты вредительства (на соперника)
-  remedy_card.rb                  — карты противодействия (на себя)
-  safety_card.rb                  — карты защиты (на себя, постоянные)
-  remove_all_safeties_card.rb     — опциональная «Снять все защиты»
-lib/mile_by_mile/car.rb          — состояние машины/лошади
-lib/mile_by_mile/deck.rb         — колода (строго по перечислению из правил)
-lib/mile_by_mile/player.rb       — игрок: рука + машина
-lib/mile_by_mile/team.rb         — команда с общей машиной
-lib/mile_by_mile/game.rb         — движок хода партии, вся игровая логика
-lib/mile_by_mile/variants/horse_deck.rb — разновидность «на лошадях»
-test/mile_by_mile_test.rb        — smoke-тесты (minitest, stdlib)
+  distance_card.rb                — distance cards (25/50/75/100/200 miles)
+  hazard_card.rb                  — hazard cards (played against an opponent)
+  remedy_card.rb                  — remedy cards (played on yourself)
+  safety_card.rb                  — safety/immunity cards (yourself, permanent)
+  remove_all_safeties_card.rb     — optional "strip all immunities" card
+lib/mile_by_mile/car.rb          — car/horse state
+lib/mile_by_mile/deck.rb         — deck, built strictly from the rules' card counts
+lib/mile_by_mile/player.rb       — player: hand + car
+lib/mile_by_mile/team.rb         — team sharing one car
+lib/mile_by_mile/game.rb         — turn engine, all game rules
+lib/mile_by_mile/variants/horse_deck.rb — "horses" variant
+test/mile_by_mile_test.rb        — smoke tests (minitest, stdlib)
 ```
 
-## Примечание про размер колоды
+Card names are plain English strings (gettext source/msgid). The engine
+itself has no gettext dependency — translation happens only in the Elten
+UI layer (`elten_app/`), see its README for the ru/pl locale.
 
-В тексте правил итог указан как «105 или 106 карточек», но при
-поштучном сложении заявленных количеств по типам выходит 107 (108
-с опциональной картой). Реализация строго следует перечислению по
-типам карт, а не итоговой сумме в тексте.
+## Note on deck size
 
-## Запуск тестов
+The rules text states the total as "105 or 106 cards", but summing the
+per-type counts as listed gives 107 (108 with the optional card). This
+implementation follows the itemized per-type counts, not the stated total.
+
+## Running tests
 
 ```bash
 ruby test/mile_by_mile_test.rb
 ```
 
-## Дальше
+## Next
 
-- Порт под Elten API (голосовой интерфейс для незрячих) — готово, см. `elten_app/`.
-  Пока режим только против бота (мультиплеер отложен по просьбе Давида
-  Пепера — переделывается протокол сигналинга).
-- Мультиплеер: сначала сигналинг с ботом, потом реальные игроки — будет
-  на базе `Program#signal`/`#signaled` из elten3, когда протокол готов.
-- Звуки будут добавлены отдельно, в `elten_app/audio/`.
+- Elten port (voice interface for blind users) — done, see `elten_app/`.
+  Bot-only for now (multiplayer is on hold per Dawid Pieper — the
+  signalling protocol is being redesigned).
+- Multiplayer: bot signalling first, then real players — will build on
+  `Program#signal`/`#signaled` from elten3, once the protocol is ready.
+- Sounds are in `elten_app/audio/` (see that README for the naming scheme
+  and a note on how Elten resolves sound asset names).

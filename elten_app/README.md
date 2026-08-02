@@ -1,71 +1,73 @@
-# MileByMile для Elten
+# MileByMile for Elten
 
-Порт игры под API Elten 3.0 (по образцу AudioMemory/Purrposterous от pajper).
-Пока только режим «против бота» — по просьбе Давида Пепера мультиплеер
-откладываем до нового протокола сигналинга.
+A port of the game to the Elten 3.0 API (following the AudioMemory /
+Purrposterous samples from pajper). Bot-only mode for now — multiplayer
+is on hold at Dawid Pieper's request until the new signalling protocol
+is ready.
 
-## Структура
+## Structure
 
 ```
-__app.rb                          — точка входа + манифест Elten3AppInfo
-__manifest.json                   — дублирующий манифест (как в примерах)
-lib/mile_by_mile/                 — КОПИЯ движка игры из ../lib/mile_by_mile
-                                     (синхронизируется скриптом ../sync_engine.sh)
+__app.rb                          — entry point + Elten3AppInfo manifest
+__manifest.json                   — duplicate manifest (matches the samples' convention)
+lib/mile_by_mile/                 — COPY of the game engine from ../lib/mile_by_mile
+                                     (kept in sync via ../sync_engine.sh)
 lib/mile_by_mile_elten/
-  bot.rb                          — ИИ-соперник
-  audio.rb                        — обёртка над play_app_sound, контракт имён звуков
-  ui.rb                           — меню, ход игрока/бота, помощь
-fuzz_bot_vs_bot.rb                — прогон N игр бот-против-бота вне Elten
-                                     (ловит краши в логике бота на реальном движке)
+  bot.rb                          — AI opponent
+  audio.rb                        — play_app_sound wrapper, sound name contract
+  ui.rb                           — menu, player/bot turns, help
+fuzz_bot_vs_bot.rb                — runs N bot-vs-bot games outside Elten
+                                     (catches crashes in bot logic against the real engine)
+harness_ui_smoke.rb               — runs the full MileByMileElten::UI class outside
+                                     Elten via stubs for _/selector/alert/EditBox
+audio/                            — sound assets (flat, see naming note below)
+locale/                           — ru/pl gettext catalogs (po + compiled mo)
 ```
 
-## Важно: движок — не редактировать здесь
+## Important: don't edit the engine here
 
-`lib/mile_by_mile/` внутри `elten_app/` — это копия. Правки вносятся в
-корневой `lib/mile_by_mile/`, а затем `../sync_engine.sh` копирует их сюда.
-Иначе копии разъедутся.
+`lib/mile_by_mile/` inside `elten_app/` is a copy. Make changes in the
+top-level `lib/mile_by_mile/`, then run `../sync_engine.sh` to copy them
+here. Otherwise the two copies drift apart.
 
-## ИИ бота
+## Bot AI
 
-Приоритет хода: 1) наладить/завести/разрулить свою машину, 2) поставить
-ещё не выставленную защиту (сохраняет ход), 3) вредительство по лидеру,
-если есть смысл (нет защиты у цели, условие применимо), 4) максимально
-длинная легальная карта движения, 5) первая карта в руке (после фикса
-движка любая карта — если её нельзя применить — просто уходит в отбой,
-а не роняет партию).
+Turn priority: 1) repair/start/un-reverse your own car, 2) play a safety
+card you don't have yet (keeps your turn), 3) play a hazard on the
+leader if it would actually do something (target lacks the matching
+immunity, condition applies), 4) the longest legal distance card,
+5) any card in hand as a last resort (after the engine fix, any card
+that can't take effect is simply discarded instead of crashing the game).
 
-## Звуки (ещё не добавлены)
-
-`audio/` пуст, ждём набор от Дениза. Контракт имён — см. комментарий в
-верху `lib/mile_by_mile_elten/audio.rb`.
-
-## Тест бота на крашах
+## Testing the bot for crashes
 
 ```bash
 ruby fuzz_bot_vs_bot.rb 1000
 ```
 
-Гоняет 1000 партий бот-против-бота вне Elten-рантайма (Program/UI-виджеты
-не нужны, только движок), проверяя, что решения бота никогда не роняют
-исключение внутри игры.
+Runs 1000 bot-vs-bot games outside the Elten runtime (engine only, no
+Program/UI widgets needed), checking that the bot's decisions never
+raise an exception inside the game.
 
-## Дальше
+```bash
+ruby harness_ui_smoke.rb 100
+```
 
-- Настоящий мультиплеер поверх `Program#signal`/`#signaled` — после того,
-  как Пепер выкатит новый протокол сигналинга.
-- Онлайн-таблица очков через `server_table` (как в AudioMemory) — пока не
-  подключена.
+Runs 100 full games through the actual `MileByMileElten::UI` class
+(menu, human turn, bot turn, help) using minimal stand-ins for the
+Elten API (`_`, `selector`, `alert`, `EditBox`, `Program`), so the UI
+integration itself is covered, not just the engine.
 
-## Локализация (po/mo)
+## Localization (po/mo)
 
-Исходный язык кода — английский (`_('...')` msgid). `locale/ru.po` и
-`locale/pl.po` — переводы на русский и польский, скомпилированные в
-`locale/ru.mo` / `locale/pl.mo` через `msgfmt`. Названия карт переводятся
-через `_(card.name)` в UI — сам движок (`lib/mile_by_mile`) на переводы
-не завязан и гейттекстом не пользуется, чтобы оставаться самодостаточным
-и тестируемым вне Elten.
+Source language in the code is English (`_('...')` msgid). `locale/ru.po`
+and `locale/pl.po` are the Russian and Polish translations, compiled to
+`locale/ru.mo` / `locale/pl.mo` via `msgfmt`. Card names are translated
+via `_(card.name)` in the UI layer — the engine itself
+(`lib/mile_by_mile`) has no gettext dependency, so it stays
+self-contained and testable outside Elten.
 
-Пересборка после правки `.po`:
+Rebuild after editing a `.po` file:
 
 ```bash
 cd locale
@@ -73,35 +75,41 @@ msgfmt -c -o ru.mo ru.po
 msgfmt -c -o pl.mo pl.po
 ```
 
-## Звук — важная находка
+## Sound — an important finding
 
-В `elten3/src/eapi/program.rb` звуковые ассеты ищутся ТОЛЬКО по basename
-без расширения (`add_sound_asset` всегда делает `File.basename(path, ext)`),
-а физическая загрузка (`collect_physical_sound_assets`) сканирует папку
-`Audio/` БЕЗ рекурсии в подпапки (`Dir.children`, не `Dir.glob("**/*")`).
-Поэтому все присланные файлы (`cars/fail/tire.ogg`, `horses/success/tire.ogg`
-и т.д.) я расплющил в `elten_app/audio/` с уникальными именами вида
-`cars_fail_tire.ogg`, `horses_success_tire.ogg`, `prot_tire.ogg`, чтобы не
-столкнуться коллизией basename (`tire` встречался в 5 разных подпапках).
-Если у тебя есть свой инструмент паковки, который работает иначе (например,
-сохраняет относительный путь как имя) — скажи, перепривяжу имена в
-`audio.rb` под него.
+In `elten3/src/eapi/program.rb`, sound assets are looked up by basename
+only, extension stripped (`add_sound_asset` always does
+`File.basename(path, ext)`), and the physical loader
+(`collect_physical_sound_assets`) scans the `Audio/` folder WITHOUT
+recursing into subfolders (`Dir.children`, not `Dir.glob("**/*")`). So
+all the files you sent (`cars/fail/tire.ogg`, `horses/success/tire.ogg`,
+etc.) got flattened into `elten_app/audio/` with unique names like
+`cars_fail_tire.ogg`, `horses_success_tire.ogg`, `prot_tire.ogg`, to
+avoid a basename collision (`tire` existed in 5 different subfolders).
+If your packaging tool works differently (e.g. keeps the relative path
+as the name), let me know and I'll rewire the names in `audio.rb`.
 
-Схема имён: `<variant>_<0|25|50|75|100|200>`, `<variant>_bibip`,
+Naming scheme: `<variant>_<0|25|50|75|100|200>`, `<variant>_bibip`,
 `<variant>_welcome`, `<variant>_fail_<key>`, `<variant>_success_<key>`,
-`prot_<key>`, `wow`. `variant` = `cars`/`horses`. `key` = `ready`(мотор),
-`tank`(бензин), `tire`(колесо), `wheel`(разворот), `seat`(авария),
-`speed`(лимит скорости), `pass`(пропуск хода).
+`prot_<key>`, `wow`. `variant` = `cars`/`horses`. `key` = `ready` (engine),
+`tank` (fuel), `tire` (wheel), `wheel` (u-turn), `seat` (accident),
+`speed` (speed limit), `pass` (skip turn).
 
-## Новое в этой итерации
+## What's new in this round
 
-- Выбор темы карт (машины/лошади) и дистанции (700/1000 миль) в начале игры.
-- Взятие карты происходит автоматически (как и раньше), но теперь озвучено
-  и панорамировано вправо (`Audio#card_drawn`, `pan: 82`) — как будто тянешь
-  карту из колоды справа от себя.
-- Перед ходом человека скринридер озвучивает одной фразой: что сделал бот +
-  что вы взяли + «Ваш ход» — например: `Bot moved 50 miles. You drew 100
-  miles. Your turn.` (переведено на ru/pl).
-- `harness_ui_smoke.rb` — гоняет реальный `MileByMileElten::UI` целиком
-  (не только движок) вне Elten через стабы `_`/`selector`/`alert`/`EditBox`,
-  проверяя весь путь человек+бот на 100+ партий без крашей.
+- Card theme (cars/horses) and distance (700/1000 miles) selection at
+  the start of a game.
+- Drawing a card still happens automatically, but is now voiced and
+  panned to the right (`Audio#card_drawn`, `pan: 82`) — as if you're
+  reaching for the deck on your right.
+- Right before the human's turn, the screen reader speaks one combined
+  line: what the bot did + what you just drew + "Your turn" — e.g.
+  `Bot moved 50 miles. You drew 100 miles. Your turn.` (translated into
+  ru/pl).
+
+## Next
+
+- Real multiplayer on top of `Program#signal`/`#signaled` — once Pieper
+  ships the new signalling protocol.
+- Online leaderboard via `server_table` (like AudioMemory) — not wired
+  up yet.
