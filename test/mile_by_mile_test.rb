@@ -144,9 +144,9 @@ class MileByMileTest < Minitest::Test
     game.instance_variable_set(:@current_index, 0)
     game.play(start) # успешно сыграна, ход переходит B
 
-    # A добрал из СВОЕЙ колоды
-    assert_equal before_a - 1, a.deck.size
-    assert_equal before_b, b.deck.size
+    # карту добирает не сыгравший A, а B — в начале своего хода
+    assert_equal before_a, a.deck.size
+    assert_equal before_b - 1, b.deck.size
   end
 
   def test_separate_decks_play_out_hand_then_finish

@@ -6,8 +6,8 @@ module MileByMileElten
 
     DISTANCE_OPTIONS = [1000, 2000, 3000, 4000, 5000].freeze
     VARIANTS = [
-      [:cars, 'Cars'],
-      [:horses, 'Horses']
+      [:cars, 'On cars'],
+      [:horses, 'On horses']
     ].freeze
     # Количество общих колод: N полных колод, перемешанных вместе.
     DECK_COPY_COUNTS = [1, 2, 3, 4, 5].freeze
@@ -205,10 +205,14 @@ module MileByMileElten
       deck_labels = [_('Each player has their own deck')]
       DECK_COPY_COUNTS.each { |n| deck_labels << _(DECK_LABELS[n]) }
 
+      # Метка строки пустая: иначе ChoiceListBox озвучивает «метка: значение»,
+      # и при фокусе метка дублируется (header звучит отдельно) — «дистанция,
+      # дистанция, 1000 миль». С пустой меткой при фокусе слышно «Дистанция:
+      # 1000 миль», а при смене значения — только само значение.
       fields = [
-        ChoiceListBox.new([[_('Card set'), variant_labels, 0]], header: _('Card set')),
-        ChoiceListBox.new([[_('Distance'), distance_labels, 0]], header: _('Distance')),
-        ChoiceListBox.new([[_('Number of decks'), deck_labels, DEFAULT_DECK_INDEX]], header: _('Number of decks'))
+        ChoiceListBox.new([['', variant_labels, 0]], header: _('Card set')),
+        ChoiceListBox.new([['', distance_labels, 0]], header: _('Distance')),
+        ChoiceListBox.new([['', deck_labels, DEFAULT_DECK_INDEX]], header: _('Number of decks'))
       ]
       accept = Button.new(_('OK'))
       cancel = Button.new(_('Cancel'))
@@ -231,7 +235,7 @@ module MileByMileElten
     end
 
     # Стартовый анонс: «Поехали! По воле судьбы первым ходите вы / ходит бот.»,
-    # а для человека ещё и первая карта руки: «Вы взяли завестись.»
+    # а для человека ещё и седьмая карта, которую он добирает в начале хода.
     def start_announcement
       phrase =
         if @game.current_player.equal?(@human)
@@ -240,8 +244,8 @@ module MileByMileElten
           _('By fate\'s will, the bot moves first.')
         end
       text = "#{_('Let\'s go!')} #{phrase}"
-      first_card = @game.current_player.equal?(@human) ? @human.hand.first : nil
-      text += " #{draw_phrase(@human, first_card)}" if first_card
+      drawn_seventh = @game.current_player.equal?(@human) ? @human.hand.last : nil
+      text += " #{draw_phrase(@human, drawn_seventh)}" if drawn_seventh
       text
     end
 
@@ -278,7 +282,8 @@ module MileByMileElten
 
         play_card_audio(card, result, @human, target, ctx)
         action = record_move(@human, card, target: target, result: result)
-        # карта добрана сразу после хода — озвучиваем тут же, как в ухе
+        # карта добирается только при удержанном ходе (защита) — озвучиваем
+        # тут же; при переходе хода к боту добор придёт в начале хода игрока
         drawn = (@human.hand - before).first
         line = drawn ? "#{action} #{draw_phrase(@human, drawn)}" : action
 
@@ -325,6 +330,7 @@ module MileByMileElten
       card, target = @bot.choose_move
       return nil if card.nil?
 
+      human_before = @human.hand.dup
       ctx = play_context(@bot_player, target)
       begin
         result = @game.play(card, target: target)
@@ -339,7 +345,14 @@ module MileByMileElten
       play_card_audio(card, result, @bot_player, target, ctx)
       # ход бота озвучивается сразу, как событие (wait: блокируем, чтобы
       # «Ваш ход» в следующем списке не перебил его) — как в ухе
-      alert(record_move(@bot_player, card, target: target, result: result), true)
+      text = record_move(@bot_player, card, target: target, result: result)
+      # после хода бота игрок добирает карту для своего хода — в ухе она
+      # озвучивается одной фразой перед списком «Ваш ход»
+      drawn = (@human.hand - human_before).first
+      if drawn && !@game.finished? && @game.current_player.equal?(@human)
+        text += " #{draw_phrase(@human, drawn)}"
+      end
+      alert(text, true)
       nil
     end
 

@@ -54,11 +54,11 @@ msgstr "ОК"
 msgid "Cancel"
 msgstr "Отмена"
 
-msgid "Cars"
-msgstr "Машины"
+msgid "On cars"
+msgstr "На машинах"
 
-msgid "Horses"
-msgstr "Лошади"
+msgid "On horses"
+msgstr "На лошадях"
 
 msgid "%{d} miles"
 msgstr "%{d} миль"

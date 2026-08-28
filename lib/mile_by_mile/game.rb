@@ -75,15 +75,14 @@ module MileByMile
     # уходит в отбой, ход передаётся следующему (использовано впустую)
     def discard_wasted(player, card)
       player.discard(card, discard_pile)
-      draw_for(player)
       advance_turn!
       :wasted
     end
 
-    # успешно сыграна: в отбой, добор карты, ход следующему
+    # успешно сыграна: в отбой, ход следующему (карту доберёт новый игрок
+    # в начале своего хода)
     def discard_played(player, card)
       player.discard(card, discard_pile)
-      draw_for(player)
       advance_turn!
       :played
     end
@@ -182,9 +181,9 @@ module MileByMile
         # ход прямо сейчас), а накопленный счётчик сработает, когда очередь
         # дойдёт до цели — то есть цель пропускает ход ещё раз
         player.discard(card, discard_pile)
-        draw_for(player)
         @current_index = (@players.index(target) + 1) % players.size
         consume_skips_for_current!
+        draw_for(current_player)
         :played
       else
         discard_played(player, card)
@@ -218,9 +217,12 @@ module MileByMile
       players.all? { |p| draw_deck_for(p).empty? && p.hand.empty? }
     end
 
+    # ход переходит следующему; тот сразу добирает карту до полной руки —
+    # седьмая берётся перед своим ходом, а не сразу после хода соперника
     def advance_turn!
       @current_index = (@current_index + 1) % players.size
       consume_skips_for_current!
+      draw_for(current_player)
     end
 
     # перескакиваем через текущего игрока, пока у него есть накопленные

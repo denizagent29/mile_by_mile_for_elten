@@ -54,11 +54,11 @@ msgstr "OK"
 msgid "Cancel"
 msgstr "Anuluj"
 
-msgid "Cars"
-msgstr "Samochody"
+msgid "On cars"
+msgstr "Na samochodach"
 
-msgid "Horses"
-msgstr "Konie"
+msgid "On horses"
+msgstr "Na koniach"
 
 msgid "%{d} miles"
 msgstr "%{d} mil"
