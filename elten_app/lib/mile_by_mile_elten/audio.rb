@@ -6,16 +6,19 @@ module MileByMileElten
   # collect_physical_sound_assets/add_sound_asset в elten3, оба используют
   # File.basename без директории как ключ поиска). Поэтому все файлы
   # переименованы в плоские уникальные имена по схеме:
-  #   <variant>_<0|25|50|75|100|200>   — озвучка карт движения
-  #   <variant>_bibip                  — старт мотора
-  #   <variant>_welcome                — начало партии/раунда
-  #   <variant>_fail_<key>             — вредительство применилось к цели
-  #   <variant>_success_<key>          — противодействие сработало
-  #   prot_<key>                       — защита выставлена (общая для всех вариантов)
-  #   wow                              — победа (общая)
+  #   <variant>_<25|50|75|100|200>   — озвучка карт движения
+  #   <variant>_welcome              — начало партии (на лошадях тише)
+  #   <variant>_bibip                — гудок через 3 сек после старта
+  #   <variant>_fail_<key>           — вредительство применилось к цели
+  #   <variant>_success_<key>        — противодействие сработало
+  #   prot_<key>                     — защита выставлена (тихо, общая)
+  #   wow                            — обгон соперника по дистанции
   # variant: cars | horses
   # key:     ready(stall) tank(empty_tank) tire(flat_tire) wheel(turned_back)
   #          seat(accident) speed(speed_limit) pass(skip_turn)
+  #
+  # Звуки воспроизводятся как в оригинальной ушной игре (Pascal): звучат
+  # только реальные переходы состояния — карта, ушедшая в отбой, молчит.
   class Audio
     include MileByMile
 
@@ -28,6 +31,10 @@ module MileByMileElten
       speed_limit: 'speed',
       skip_turn: 'pass'
     }.freeze
+
+    # Как в ухе: защиты (prots) и ограничение скорости звучат тише.
+    PROT_VOLUME = 40
+    SPEED_VOLUME = 40
 
     attr_accessor :variant
 
@@ -45,35 +52,56 @@ module MileByMileElten
       false
     end
 
+    # Начало партии — как в ухе: welcome (на лошадях заметно тише) и гудок
+    # через 3 секунды. Звук тасования (cards/shuffle/4.ogg) не воспроизводим —
+    # в ассетах его нет.
     def welcome
-      play("#{@variant}_welcome")
-    end
-
-    # звук проигрывается при розыгрыше карты игроком/ботом (по центру)
-    def card_played(card)
-      play(sound_name_for(card))
-    end
-
-    # тот же звук, что и card_played, но с панорамой вправо — по просьбе:
-    # взятие карты перед ходом звучит будто тянешь её из колоды справа
-    def card_drawn(card)
-      play(sound_name_for(card), pan: 82, volume: 70)
-    end
-
-    def win
-      play('wow')
-    end
-
-    private
-
-    def sound_name_for(card)
-      case card
-      when DistanceCard then "#{@variant}_#{card.miles}"
-      when HazardCard then "#{@variant}_fail_#{SOUND_KEY.fetch(card.type, 'ready')}"
-      when RemedyCard then "#{@variant}_success_#{SOUND_KEY.fetch(card.cures, 'ready')}"
-      when SafetyCard then "prot_#{SOUND_KEY.fetch(card.type, 'ready')}"
-      when RemoveAllSafetiesCard then "#{@variant}_bibip"
+      play("#{@variant}_welcome", volume: @variant == :horses ? 10 : 100)
+      Thread.new do
+        sleep 3
+        play("#{@variant}_bibip")
       end
+    end
+
+    # Карта движения сыграна успешно: номинал + панорама по направлению,
+    # при обгоне соперника — дополнительно wow (как в ухе).
+    def distance(card, backward: false, overtook: false)
+      play("#{@variant}_#{card.miles}", pan: backward ? 30 : 70)
+      play('wow') if overtook
+    end
+
+    # Вредительство применилось к цели: fail/<n>. Если под раздачу попал и
+    # мотор (слив бензина/прокол/авария на едущей машине) — ещё и fail/ready.
+    def hazard(card, also_stalled: false)
+      key = SOUND_KEY.fetch(card.type, 'ready')
+      play("#{@variant}_fail_#{key}", volume: card.type == :speed_limit ? SPEED_VOLUME : 100)
+      play("#{@variant}_fail_ready") if also_stalled
+    end
+
+    # Противодействие сработало: success/<n>.
+    def remedy(card)
+      key = SOUND_KEY.fetch(card.cures, 'ready')
+      play("#{@variant}_success_#{key}", volume: card.cures == :speed_limit ? SPEED_VOLUME : 100)
+    end
+
+    # «Пропуск хода» применён — в ухе это карта успеха (success/pass).
+    def skip_turn_applied
+      play("#{@variant}_success_pass")
+    end
+
+    # Защита выставлена впервые: prots/<n>, тихо.
+    def protection(card)
+      play("prot_#{SOUND_KEY.fetch(card.type, 'ready')}", volume: PROT_VOLUME)
+    end
+
+    # Защита не легла (такая уже стоит) либо у соперника сняты защиты:
+    # в ухе это звук fail/pass.
+    def protection_wasted
+      play("#{@variant}_fail_pass")
+    end
+
+    def removed_all_safeties
+      play("#{@variant}_fail_pass")
     end
   end
 end

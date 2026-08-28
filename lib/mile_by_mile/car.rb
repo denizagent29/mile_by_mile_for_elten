@@ -5,7 +5,7 @@ module MileByMile
   class Car
     IMMOBILIZING = %i[stall empty_tank flat_tire accident].freeze
 
-    attr_reader :distance
+    attr_reader :distance, :safeties
 
     def initialize
       @distance = 0
@@ -14,7 +14,7 @@ module MileByMile
       @safeties = {}
       @speed_limited = false
       @reversed = false
-      @skip_next_turn = false
+      @skip_turns = 0
     end
 
     def running?
@@ -53,7 +53,12 @@ module MileByMile
     end
 
     def skip_next_turn?
-      @skip_next_turn
+      @skip_turns.positive?
+    end
+
+    # сколько ходов подряд пропустит из-за накопленных карт «пропуск хода»
+    def skip_turns
+      @skip_turns
     end
 
     # применяется на цель (соперника)
@@ -67,7 +72,7 @@ module MileByMile
       when :speed_limit
         @speed_limited = true
       when :skip_turn
-        @skip_next_turn = true
+        @skip_turns += 1
       else
         raise ArgumentError, "неизвестное вредительство: #{type}"
       end
@@ -84,8 +89,9 @@ module MileByMile
       when :repair_tire
         @active_hazards.delete(:flat_tire)
       when :repair
+        # починка после аварии убирает аварию, но мотор не заводит —
+        # нужно отдельно сыграть «Завестись» (как в ухе)
         @active_hazards.delete(:accident)
-        @running = true
       when :turn_forward
         raise RuleViolation, 'the car must be repaired and started first' unless running?
 
@@ -104,11 +110,12 @@ module MileByMile
       @distance = reversed? ? [@distance - miles, 0].max : @distance + miles
     end
 
-    # съедает разовый пропуск хода, возвращает true если ход был пропущен
+    # съедает один из накопленных пропусков хода, возвращает true,
+    # если этот ход был пропущен
     def consume_skip_turn!
-      return false unless @skip_next_turn
+      return false if @skip_turns <= 0
 
-      @skip_next_turn = false
+      @skip_turns -= 1
       true
     end
 

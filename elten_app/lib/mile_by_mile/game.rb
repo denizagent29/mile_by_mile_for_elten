@@ -29,6 +29,8 @@ module MileByMile
         @deck.deal(@players, 6)
       end
       @current_index = rand(@players.size)
+      # стартовый игрок берёт седьмую карту (как в ухе)
+      draw_for(current_player)
     end
 
     def current_player
@@ -40,11 +42,9 @@ module MileByMile
     end
 
     def finished?
-      return !winner.nil? || @deck.empty? if @deck_mode == :shared
-
-      # раздельные колоды: игра заканчивается, когда игроку нечего брать
-      # и нечего ходить — иначе партия зависает на пустой руке
-      !winner.nil? || players.any? { |p| p.deck.empty? && p.hand.empty? }
+      # колода бесконечно пополняется из сброса, так что партия заканчивается
+      # только победой — либо тупиком, когда всем нечего брать и ходить
+      !winner.nil? || stuck?
     end
 
     # card   — карта из руки текущего игрока
@@ -75,7 +75,7 @@ module MileByMile
     # уходит в отбой, ход передаётся следующему (использовано впустую)
     def discard_wasted(player, card)
       player.discard(card, discard_pile)
-      player.draw(draw_deck_for(player))
+      draw_for(player)
       advance_turn!
       :wasted
     end
@@ -83,7 +83,7 @@ module MileByMile
     # успешно сыграна: в отбой, добор карты, ход следующему
     def discard_played(player, card)
       player.discard(card, discard_pile)
-      player.draw(draw_deck_for(player))
+      draw_for(player)
       advance_turn!
       :played
     end
@@ -91,7 +91,7 @@ module MileByMile
     # успешная первая защита: в отбой, добор карты, ход СОХРАНЯЕТСЯ
     def discard_keep_turn(player, card)
       player.discard(card, discard_pile)
-      player.draw(draw_deck_for(player))
+      draw_for(player)
       :kept_turn
     end
 
@@ -101,6 +101,10 @@ module MileByMile
       return discard_wasted(player, card) if car.speed_limited? && card.miles > 50
 
       if car.reversed?
+        # задним ходом можно ехать не дальше уже набранной дистанции —
+        # иначе карта уходит в отбой (как в ухе)
+        return discard_wasted(player, card) if car.distance < card.miles
+
         car.move!(card.miles)
         return discard_played(player, card)
       end
@@ -124,7 +128,12 @@ module MileByMile
         car.apply_remedy!(card.type)
         discard_played(player, card)
       when :stall
+        # «Завестись» можно, только если бак, колёса и место в порядке
+        # (как в ухе) — иначе карта уходит в отбой
         return discard_wasted(player, card) if car.running?
+        return discard_wasted(player, card) if car.stalled_by?(:empty_tank)
+        return discard_wasted(player, card) if car.stalled_by?(:flat_tire)
+        return discard_wasted(player, card) if car.stalled_by?(:accident)
 
         car.apply_remedy!(card.type)
         discard_played(player, card)
@@ -164,11 +173,22 @@ module MileByMile
       when :accident, :turned_back
         return discard_wasted(player, card) unless tcar.moving?
       when :skip_turn
-        # всегда можно сыграть, если нет защиты
+        # всегда можно сыграть, если нет защиты; пропуски копятся и стакаются
       end
 
       tcar.apply_hazard!(card.type)
-      discard_played(player, card)
+      if card.type == :skip_turn
+        # ухо: карта «пропуск хода» перескакивает через цель сразу (та теряет
+        # ход прямо сейчас), а накопленный счётчик сработает, когда очередь
+        # дойдёт до цели — то есть цель пропускает ход ещё раз
+        player.discard(card, discard_pile)
+        draw_for(player)
+        @current_index = (@players.index(target) + 1) % players.size
+        consume_skips_for_current!
+        :played
+      else
+        discard_played(player, card)
+      end
     end
 
     def play_remove_all_safeties(player, card, target)
@@ -183,10 +203,31 @@ module MileByMile
       @deck_mode == :separate ? player.deck : @deck
     end
 
+    # добор с автопополнением колоды из сброса, когда она пуста
+    def draw_for(player)
+      deck = draw_deck_for(player)
+      deck.refill_from(discard_pile) if deck.empty?
+      player.draw(deck)
+    end
+
+    # партия в тупике: нечего брать (колода пуста и не пополняется) и ни у
+    # кого нет карт в руке — дальше ходов не будет
+    def stuck?
+      return false if discard_pile.size >= 2
+
+      players.all? { |p| draw_deck_for(p).empty? && p.hand.empty? }
+    end
+
     def advance_turn!
-      loop do
+      @current_index = (@current_index + 1) % players.size
+      consume_skips_for_current!
+    end
+
+    # перескакиваем через текущего игрока, пока у него есть накопленные
+    # пропуски хода — каждый визит съедает один пропуск
+    def consume_skips_for_current!
+      while current_player.car.consume_skip_turn!
         @current_index = (@current_index + 1) % players.size
-        break unless current_player.car.consume_skip_turn!
       end
     end
   end

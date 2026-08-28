@@ -13,16 +13,24 @@ class MileByMileTest < Minitest::Test
     @game.instance_variable_set(:@current_index, 0)
   end
 
-  # Сумма по поштучному перечислению карточек в правилах даёт 107
-  # (без опциональной карты) и 108 (с ней) — итоговое число 105/106
-  # в тексте правил указано неточно, реализация строго следует
-  # именно перечислению количеств по типам карт.
+  # Колода как в ухе: 25/50/75 по 10, 100×12, 200×4 — итого 105 карт,
+  # 106 с опциональной «Снять все защиты».
   def test_deck_size
-    assert_equal 107, Deck.new.size
+    assert_equal 105, Deck.new.size
   end
 
   def test_deck_size_with_optional_card
-    assert_equal 108, Deck.new(include_remove_all_safeties: true).size
+    assert_equal 106, Deck.new(include_remove_all_safeties: true).size
+  end
+
+  def test_deck_has_four_200_mile_cards
+    count = 0
+    deck = Deck.new
+    until deck.empty?
+      c = deck.draw
+      count += 1 if c.is_a?(DistanceCard) && c.miles == 200
+    end
+    assert_equal 4, count
   end
 
   def test_cannot_move_without_start
@@ -118,11 +126,10 @@ class MileByMileTest < Minitest::Test
     refute_nil a.deck
     refute_nil b.deck
     refute_same a.deck, b.deck
-    assert_equal 6, a.hand.size
-    assert_equal 6, b.hand.size
-    # каждая колода полного состава и не пуста после раздачи
-    assert_equal Deck.new.size - 6, a.deck.size
-    assert_equal Deck.new.size - 6, b.deck.size
+    # стартовый игрок берёт седьмую карту
+    assert_equal [6, 7], [a.hand.size, b.hand.size].sort
+    # каждая колода полного состава; у стартового игрока на карту меньше
+    assert_equal [Deck.new.size - 7, Deck.new.size - 6], [a.deck.size, b.deck.size].sort
   end
 
   def test_separate_decks_draw_from_own_deck
@@ -150,8 +157,10 @@ class MileByMileTest < Minitest::Test
     a.deck.instance_variable_set(:@cards, [])
     b.deck.instance_variable_set(:@cards, [])
     refute game.finished?
-    # как только игроку нечего брать и нечего ходить — партия окончена
+    # как только ВСЕМ нечего брать и нечего ходить — партия окончена
     a.hand.clear
+    refute game.finished? # у B ещё есть карты в руке — игра продолжается
+    b.hand.clear
     assert game.finished?
   end
 
@@ -189,5 +198,106 @@ class MileByMileTest < Minitest::Test
     # раньше здесь падало исключение вместо ухода карты в отбой
     @game.play(turn_forward)
     assert @p1.car.reversed?
+  end
+
+  def test_starter_gets_seventh_card
+    hands = @game.players.map { |p| p.hand.size }.sort
+    assert_equal [6, 7], hands
+  end
+
+  def test_repair_after_accident_does_not_restart_engine
+    start = RemedyCard.new(:start)
+    @p1.hand << start
+    @game.play(start) # p1 заведена
+
+    accident = HazardCard.new(:accident)
+    @p2.hand << accident
+    @game.play(accident, target: @p1) # p1 в аварии
+    refute @p1.car.running?
+    assert @p1.car.stalled_by?(:accident)
+
+    repair = RemedyCard.new(:repair)
+    @p1.hand << repair
+    @game.play(repair)
+    refute @p1.car.stalled_by?(:accident)
+    refute @p1.car.running? # починка не заводит мотор — нужно «Завестись»
+  end
+
+  def test_start_requires_tank_tire_seat_ok
+    [[:empty_tank, RemedyCard.new(:start)],
+     [:flat_tire, RemedyCard.new(:start)],
+     [:accident, RemedyCard.new(:start)]].each do |hazard, _card_class|
+      p = Player.new('X')
+      game = Game.new([p, @p2], distance_target: 1000)
+      game.instance_variable_set(:@current_index, 0)
+      p.car.apply_hazard!(hazard)
+      start = RemedyCard.new(:start)
+      p.hand << start
+      assert_equal :wasted, game.play(start)
+      refute p.car.running?
+    end
+  end
+
+  def test_reversed_move_discards_when_distance_less_than_card
+    @p1.car.instance_variable_set(:@distance, 30)
+    @p1.car.instance_variable_set(:@running, true)
+    @p1.car.instance_variable_set(:@reversed, true)
+    d50 = DistanceCard.new(50)
+    @p1.hand << d50
+    assert_equal :wasted, @game.play(d50)
+    assert_equal 30, @p1.car.distance
+  end
+
+  def test_skip_turn_stacks
+    skip1 = HazardCard.new(:skip_turn)
+    skip2 = HazardCard.new(:skip_turn)
+    @p1.hand.concat([skip1, skip2])
+
+    @game.play(skip1, target: @p2)
+    assert_equal 1, @p2.car.skip_turns
+    assert_equal @p1, @game.current_player # перескочили через p2, ход снова p1
+
+    @game.play(skip2, target: @p2)
+    assert_equal 2, @p2.car.skip_turns
+    assert_equal @p1, @game.current_player
+
+    # p1 ходит обычной картой — p2 пропускает ход, счётчик уменьшается
+    start = RemedyCard.new(:start)
+    @p1.hand << start
+    @game.play(start)
+    assert_equal 1, @p2.car.skip_turns
+    assert_equal @p1, @game.current_player
+
+    # ещё одна карта p1 — p2 пропускает второй ход
+    d25 = DistanceCard.new(25)
+    @p1.hand << d25
+    @game.play(d25)
+    assert_equal 0, @p2.car.skip_turns
+    assert_equal @p1, @game.current_player
+  end
+
+  def test_deck_refill_keeps_last_discarded
+    deck = Deck.new
+    deck.instance_variable_set(:@cards, [])
+    c1 = DistanceCard.new(25)
+    c2 = DistanceCard.new(50)
+    pile = [c1, c2]
+    assert deck.refill_from(pile)
+    assert_equal 1, deck.size
+    assert_equal [c2], pile # последняя сброшенная остаётся в сбросе
+  end
+
+  def test_game_continues_after_deck_exhaustion_via_refill
+    game = Game.new([@p1, @p2], distance_target: 1000)
+    game.deck.instance_variable_set(:@cards, [])
+    game.discard_pile.concat([DistanceCard.new(25), DistanceCard.new(50)])
+    refute game.finished?
+
+    start = RemedyCard.new(:start)
+    @p1.hand << start
+    game.instance_variable_set(:@current_index, 0)
+    game.play(start)
+    refute game.deck.empty? # колода наполнилась из сброса
+    assert_equal 1, game.discard_pile.size
   end
 end

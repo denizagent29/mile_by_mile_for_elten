@@ -67,12 +67,12 @@ via `_(card.name)` in the UI layer — the engine itself
 (`lib/mile_by_mile`) has no gettext dependency, so it stays
 self-contained and testable outside Elten.
 
-Rebuild after editing a `.po` file:
+Rebuild after editing a `.po` file (no `msgfmt` in this environment, so a
+minimal .po→.mo compiler lives at `tools/po2mo.rb`):
 
 ```bash
-cd locale
-msgfmt -c -o ru.mo ru.po
-msgfmt -c -o pl.mo pl.po
+ruby tools/po2mo.rb elten_app/locale/ru.po elten_app/locale/ru.mo
+ruby tools/po2mo.rb elten_app/locale/pl.po elten_app/locale/pl.mo
 ```
 
 ## Sound — an important finding
@@ -97,15 +97,20 @@ Naming scheme: `<variant>_<0|25|50|75|100|200>`, `<variant>_bibip`,
 
 ## What's new in this round
 
-- Card theme (cars/horses) and distance (700/1000 miles) selection at
-  the start of a game.
-- Drawing a card still happens automatically, but is now voiced and
-  panned to the right (`Audio#card_drawn`, `pan: 82`) — as if you're
-  reaching for the deck on your right.
-- Right before the human's turn, the screen reader speaks one combined
-  line: what the bot did + what you just drew + "Your turn" — e.g.
-  `Bot moved 50 miles. You drew 100 miles. Your turn.` (translated into
-  ru/pl).
+- Card theme (cars/horses) and distance selection at the start of a game.
+- Action phrases now match the original ear.social game (screen reader
+  and speech): target-centered wording for hazards/protections, horses
+  use their own verbs (saddle up / feed / shoe / rest).
+- Sounds verified against the original Pascal: only real state changes
+  make a sound (a card wasted into the discard is silent); the speed
+  limit and protections are quieter; `wow` plays when you overtake the
+  opponent, not on the finish line; the skip-turn card sounds like a
+  success card; the game starts with the welcome fanfare (softer for
+  horses) and a horn 3 seconds later.
+- Drawing a card is voiced; right before the human's turn the screen
+  reader speaks one combined line: what the bot did + what you just
+  drew + "Your turn" — e.g. `Bot moved 50 miles. You drew 100 miles.
+  Your turn.` (translated into ru/pl).
 
 ## What's new in this round
 

@@ -37,6 +37,20 @@ module MileByMile
       @cards.empty?
     end
 
+    # Когда колода кончается, она наполняется из сброса — кроме последней
+    # сброшенной карты, которая остаётся в сбросе (как в ухе). Возвращает
+    # false, если наполнить нечем (в сбросе одна-единственная карта).
+    def refill_from(discard_pile)
+      return false if discard_pile.size < 2
+
+      last = discard_pile.pop
+      @cards.concat(discard_pile)
+      discard_pile.clear
+      discard_pile << last
+      shuffle!
+      true
+    end
+
     private
 
     def build(include_remove_all_safeties)
@@ -46,7 +60,7 @@ module MileByMile
       cards.concat(Array.new(10) { DistanceCard.new(50) })
       cards.concat(Array.new(10) { DistanceCard.new(75) })
       cards.concat(Array.new(12) { DistanceCard.new(100) })
-      cards.concat(Array.new(6) { DistanceCard.new(200) })
+      cards.concat(Array.new(4) { DistanceCard.new(200) })
 
       cards.concat(Array.new(10) { RemedyCard.new(:start) })
       REMEDY_TYPES.each { |t| cards.concat(Array.new(4) { RemedyCard.new(t) }) }

@@ -28,6 +28,120 @@ module MileByMileElten
 
     IMMOBILIZING = %i[stall empty_tank flat_tire accident].freeze
 
+    # msgid-ключи противодействий по (набор карт, кто, тип карты) — фразы
+    # как в ушной игре: на машинах «завести мотор», на лошадях «оседлать».
+    REMEDY_KEYS = {
+      cars: {
+        me: {
+          start: 'You started the engine.',
+          refuel: 'You refueled.',
+          repair_tire: 'You fixed the tire.',
+          repair: 'You repaired the car.',
+          turn_forward: 'You turned forward.',
+          remove_speed_limit: 'You removed the speed limit.'
+        },
+        bot: {
+          start: 'The bot started the engine.',
+          refuel: 'The bot refueled.',
+          repair_tire: 'The bot fixed the tire.',
+          repair: 'The bot repaired the car.',
+          turn_forward: 'The bot turned forward.',
+          remove_speed_limit: 'The bot removed the speed limit.'
+        }
+      },
+      horses: {
+        me: {
+          start: 'You saddled up.',
+          refuel: 'You fed the horse.',
+          repair_tire: 'You shod the horse.',
+          repair: 'You let the horse rest.',
+          turn_forward: 'You turned forward.',
+          remove_speed_limit: 'You removed the speed limit.'
+        },
+        bot: {
+          start: 'The bot saddled up.',
+          refuel: 'The bot fed the horse.',
+          repair_tire: 'The bot shod the horse.',
+          repair: 'The bot let the horse rest.',
+          turn_forward: 'The bot turned forward.',
+          remove_speed_limit: 'The bot removed the speed limit.'
+        }
+      }
+    }.freeze
+
+    # Фразы защит на лошадях: у седла/голода/подковы/усталости своя
+    # конструкция («защитил лошадь от ...»), остальное как на машинах.
+    PROTECTION_KEYS = {
+      me: {
+        stall: 'You protected yourself from falling from the saddle.',
+        empty_tank: 'You protected your horse from hunger.',
+        flat_tire: 'You protected your horse from losing its horseshoe.',
+        accident: 'You protected your horse from exhaustion.',
+        turned_back: 'You protected yourself from being turned back.',
+        speed_limit: 'You protected yourself from the speed limit.',
+        skip_turn: 'You protected yourself from skipping a turn.'
+      },
+      bot: {
+        stall: 'The bot protected itself from falling from the saddle.',
+        empty_tank: 'The bot protected its horse from hunger.',
+        flat_tire: 'The bot protected its horse from losing its horseshoe.',
+        accident: 'The bot protected its horse from exhaustion.',
+        turned_back: 'The bot protected itself from being turned back.',
+        speed_limit: 'The bot protected itself from the speed limit.',
+        skip_turn: 'The bot protected itself from skipping a turn.'
+      }
+    }.freeze
+
+    # Вредительство озвучивается от имени того, на кого оно легло, как в ухе:
+    # «Вы были остановлены» / «Бот был остановлен», а не «Вы заглушили мотор боту».
+    HAZARD_KEYS = {
+      cars: {
+        me: {
+          stall: 'You were stopped.',
+          empty_tank: 'You ran out of fuel.',
+          flat_tire: 'You must pump up your tire.',
+          accident: 'You had an accident.',
+          turned_back: 'You were turned back.',
+          speed_limit: 'You were speed-limited.',
+          skip_turn: 'You skip a turn.'
+        },
+        bot: {
+          stall: 'The bot was stopped.',
+          empty_tank: 'The bot ran out of fuel.',
+          flat_tire: 'The bot must pump up its tire.',
+          accident: 'The bot had an accident.',
+          turned_back: 'The bot was turned back.',
+          speed_limit: 'The bot was speed-limited.',
+          skip_turn: 'The bot skips a turn.'
+        }
+      },
+      horses: {
+        me: {
+          stall: 'You fell from the saddle.',
+          empty_tank: 'You must feed your horse.',
+          flat_tire: 'You must shoe your horse.',
+          accident: 'You must give your horse a rest.',
+          turned_back: 'You were turned back.',
+          speed_limit: 'You were speed-limited.',
+          skip_turn: 'You skip a turn.'
+        },
+        bot: {
+          stall: 'The bot fell from the saddle.',
+          empty_tank: 'The bot must feed its horse.',
+          flat_tire: 'The bot must shoe its horse.',
+          accident: 'The bot must give its horse a rest.',
+          turned_back: 'The bot was turned back.',
+          speed_limit: 'The bot was speed-limited.',
+          skip_turn: 'The bot skips a turn.'
+        }
+      }
+    }.freeze
+
+    REMOVE_ALL_KEYS = {
+      me: 'You lost all your protections.',
+      bot: 'The bot lost all its protections.'
+    }.freeze
+
     def initialize(program)
       @program = program
       @audio = Audio.new(program)
@@ -64,6 +178,7 @@ module MileByMileElten
       variant, distance, deck_mode, deck_copies = settings
 
       @audio.variant = variant
+      @variant = variant
       deck_class = variant == :horses ? Variants::HorseDeck : Deck
 
       @human = Player.new(_('You'))
@@ -155,6 +270,7 @@ module MileByMileElten
 
         target = card.opponent_only? ? @bot_player : nil
         before = @human.hand.dup
+        ctx = play_context(@human, target)
         begin
           result = @game.play(card, target: target)
         rescue MileByMile::Game::RuleViolation => e
@@ -162,7 +278,7 @@ module MileByMileElten
           next
         end
 
-        @audio.card_played(card)
+        play_card_audio(card, result, @human, target, ctx)
         action = record_move(@human, card, target: target, result: result)
         drawn = (@human.hand - before).first
         @pending_draw_message = drawn ? draw_phrase(@human, drawn) : nil
@@ -213,6 +329,7 @@ module MileByMileElten
       card, target = @bot.choose_move
       return nil if card.nil?
 
+      ctx = play_context(@bot_player, target)
       begin
         result = @game.play(card, target: target)
       rescue MileByMile::Game::RuleViolation
@@ -223,7 +340,7 @@ module MileByMileElten
         card = fallback
       end
 
-      @audio.card_played(card)
+      play_card_audio(card, result, @bot_player, target, ctx)
       (@pending_bot_actions ||= []) << record_move(@bot_player, card, target: target, result: result)
       nil
     end
@@ -266,6 +383,53 @@ module MileByMileElten
       text
     end
 
+    # Контекст розыгрыша ДО применения карты — для звука «как в ухе»: звучат
+    # только реально сработавшие переходы состояния.
+    def play_context(player, target)
+      {
+        prev_distance: player.car.distance,
+        target_was_running: target&.car&.running?,
+        target_safeties: target&.car&.safeties&.size
+      }
+    end
+
+    # Звук по исходу розыгрыша — как в ухе: карта, ушедшая в отбой, молчит
+    # (кроме случая, когда защита не легла из-за уже стоящей), движение с
+    # обгоном соперника играет wow.
+    def play_card_audio(card, result, player, target, ctx)
+      case card
+      when DistanceCard
+        return if result == :wasted
+
+        @audio.distance(card, backward: player.car.reversed?, overtook: overtook?(player, ctx))
+      when HazardCard
+        return if result == :wasted
+
+        if card.type == :skip_turn
+          @audio.skip_turn_applied
+        else
+          also_stalled = ctx[:target_was_running] && %i[empty_tank flat_tire accident].include?(card.type)
+          @audio.hazard(card, also_stalled: also_stalled)
+        end
+      when RemedyCard
+        return if result == :wasted
+
+        @audio.remedy(card)
+      when SafetyCard
+        result == :kept_turn ? @audio.protection(card) : @audio.protection_wasted
+      when RemoveAllSafetiesCard
+        @audio.removed_all_safeties if result == :played && ctx[:target_safeties].to_i.positive?
+      end
+    end
+
+    # Обгон соперника по дистанции — как в ухе, играет wow.
+    def overtook?(player, ctx)
+      return false if player.car.reversed?
+
+      other = @game.players.find { |p| !p.equal?(player) }
+      other && ctx[:prev_distance] <= other.car.distance && player.car.distance > other.car.distance
+    end
+
     # Фраза действия: что сыграл (или сбросил) игрок. Именно её NVDA читает
     # после хода, поэтому она же попадает в историю для F2.
     def action_phrase(player, card, target: nil, result:)
@@ -278,34 +442,47 @@ module MileByMileElten
       when RemedyCard
         remedy_phrase(me, card.type)
       when SafetyCard
-        me ? _('You protected yourself from %{hazard}.') % { hazard: hazard_genitive(card.type) } : _('The bot protected itself from %{hazard}.') % { hazard: hazard_genitive(card.type) }
+        protection_phrase(me, card.type)
       when HazardCard
         hazard_phrase(me, card.type)
       when RemoveAllSafetiesCard
-        me ? _('You stripped the bot\'s protections.') : _('The bot stripped your protections.')
+        remove_all_phrase(me)
       end
+    end
+
+    # Набор карт: машины или лошади. Меняет глаголы фраз как в ушной игре.
+    def cars?
+      @variant != :horses
     end
 
     def distance_phrase(me, backward, card)
-      if backward
-        me ? _('You drove back %{miles}.') % { miles: _(card.name) } : _('The bot drove back %{miles}.') % { miles: _(card.name) }
-      else
-        me ? _('You drove %{miles}.') % { miles: _(card.name) } : _('The bot drove %{miles}.') % { miles: _(card.name) }
-      end
+      key =
+        if cars?
+          backward ? (me ? 'You drove back %{miles}.' : 'The bot drove back %{miles}.')
+                   : (me ? 'You drove %{miles}.' : 'The bot drove %{miles}.')
+        else
+          backward ? (me ? 'You galloped back %{miles}.' : 'The bot galloped back %{miles}.')
+                   : (me ? 'You galloped %{miles}.' : 'The bot galloped %{miles}.')
+        end
+      _(key) % { miles: _(card.name) }
     end
 
     def remedy_phrase(me, type)
-      case type
-      when :start then me ? _('You started your car.') : _('The bot started its engine.')
-      when :refuel then me ? _('You refueled.') : _('The bot refueled.')
-      when :repair_tire then me ? _('You fixed the tire.') : _('The bot fixed the tire.')
-      when :repair then me ? _('You repaired your car.') : _('The bot repaired its car.')
-      when :turn_forward then me ? _('You turned forward.') : _('The bot turned forward.')
-      when :remove_speed_limit then me ? _('You removed the speed limit.') : _('The bot removed the speed limit.')
+      _(REMEDY_KEYS[@variant || :cars][me ? :me : :bot][type])
+    end
+
+    # Защита: на машинах «защитился от ...», на лошадях своя конструкция
+    # для седла/голода/подковы/усталости — как в ушной игре.
+    def protection_phrase(me, type)
+      if cars?
+        key = me ? 'You protected yourself from %{hazard}.' : 'The bot protected itself from %{hazard}.'
+        _(key) % { hazard: hazard_genitive(type) }
+      else
+        _(PROTECTION_KEYS[me ? :me : :bot][type])
       end
     end
 
-    # Родительный падеж после «защитился от ...» — как в ушной игре.
+    # Родительный падеж после «защитился от ...» на машинах — как в ушной игре.
     def hazard_genitive(type)
       case type
       when :stall then _('engine stalling')
@@ -319,15 +496,15 @@ module MileByMileElten
     end
 
     def hazard_phrase(me, type)
-      case type
-      when :stall then me ? _('You stalled the bot\'s engine.') : _('The bot stalled your engine.')
-      when :empty_tank then me ? _('You drained the bot\'s tank.') : _('The bot drained your tank.')
-      when :flat_tire then me ? _('You gave the bot a flat tire.') : _('The bot gave you a flat tire.')
-      when :accident then me ? _('You crashed the bot.') : _('The bot crashed you.')
-      when :turned_back then me ? _('You turned the bot around.') : _('The bot turned you around.')
-      when :speed_limit then me ? _('You limited the bot\'s speed.') : _('The bot limited your speed.')
-      when :skip_turn then me ? _('You made the bot skip a turn.') : _('The bot made you skip a turn.')
-      end
+      # цель — противоположный игрок: о последствии вредительства говорим
+      # от его имени, а не от имени того, кто сыграл карту
+      target = me ? :bot : :me
+      _(HAZARD_KEYS[@variant || :cars][target][type])
+    end
+
+    def remove_all_phrase(me)
+      # о снятии защит тоже говорим от имени того, кто их потерял
+      _(REMOVE_ALL_KEYS[me ? :bot : :me])
     end
 
     def draw_phrase(player, card)
@@ -398,7 +575,7 @@ module MileByMileElten
     def announce_result
       winner = @game.winner
       if winner.equal?(@human)
-        @audio.win
+        # в ухе у победы нет спецзвука — wow играет при обгоне соперника
         alert(_('You are at the finish line. Congratulations!'), true)
       elsif winner != nil
         alert(_('The bot is at the finish line.'), true)

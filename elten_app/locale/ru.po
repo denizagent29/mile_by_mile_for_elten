@@ -93,10 +93,10 @@ msgstr "Вы взяли %{card}."
 msgid "The bot drew %{card}."
 msgstr "Бот взял %{card}."
 
-msgid "You started your car."
-msgstr "Вы завели свою машину."
+msgid "You started the engine."
+msgstr "Вы завели мотор."
 
-msgid "The bot started its engine."
+msgid "The bot started the engine."
 msgstr "Бот завёл мотор."
 
 msgid "You refueled."
@@ -111,10 +111,10 @@ msgstr "Вы накачали колесо."
 msgid "The bot fixed the tire."
 msgstr "Бот накачал колесо."
 
-msgid "You repaired your car."
+msgid "You repaired the car."
 msgstr "Вы починили машину."
 
-msgid "The bot repaired its car."
+msgid "The bot repaired the car."
 msgstr "Бот починил машину."
 
 msgid "You turned forward."
@@ -174,53 +174,155 @@ msgstr "Вы сбросили %{card}."
 msgid "The bot discarded %{card}."
 msgstr "Бот сбросил %{card}."
 
-msgid "You stalled the bot's engine."
-msgstr "Вы заглушили мотор боту."
+msgid "You galloped %{miles}."
+msgstr "Вы проскакали %{miles}."
 
-msgid "The bot stalled your engine."
-msgstr "Бот заглушил мотор вам."
+msgid "The bot galloped %{miles}."
+msgstr "Бот проскакал %{miles}."
 
-msgid "You drained the bot's tank."
-msgstr "Вы слили бензин боту."
+msgid "You galloped back %{miles}."
+msgstr "Вы проскакали обратно %{miles}."
 
-msgid "The bot drained your tank."
-msgstr "Бот слил бензин вам."
+msgid "The bot galloped back %{miles}."
+msgstr "Бот проскакал обратно %{miles}."
 
-msgid "You gave the bot a flat tire."
-msgstr "Вы прокололи колесо боту."
+msgid "You saddled up."
+msgstr "Вы оседлали лошадь."
 
-msgid "The bot gave you a flat tire."
-msgstr "Бот проколол колесо вам."
+msgid "The bot saddled up."
+msgstr "Бот оседлал лошадь."
 
-msgid "You crashed the bot."
-msgstr "Вы устроили аварию боту."
+msgid "You fed the horse."
+msgstr "Вы покормили лошадь."
 
-msgid "The bot crashed you."
-msgstr "Бот устроил аварию вам."
+msgid "The bot fed the horse."
+msgstr "Бот покормил лошадь."
 
-msgid "You turned the bot around."
-msgstr "Вы развернули бота назад."
+msgid "You shod the horse."
+msgstr "Вы подковали лошадь."
 
-msgid "The bot turned you around."
-msgstr "Бот развернул вас назад."
+msgid "The bot shod the horse."
+msgstr "Бот подковал лошадь."
 
-msgid "You limited the bot's speed."
-msgstr "Вы ограничили скорость боту."
+msgid "You let the horse rest."
+msgstr "Вы дали отдохнуть лошади."
 
-msgid "The bot limited your speed."
-msgstr "Бот ограничил скорость вам."
+msgid "The bot let the horse rest."
+msgstr "Бот дал отдохнуть лошади."
 
-msgid "You made the bot skip a turn."
-msgstr "Вы заставили бота пропустить ход."
+msgid "You were stopped."
+msgstr "Вы были остановлены."
 
-msgid "The bot made you skip a turn."
-msgstr "Бот заставил вас пропустить ход."
+msgid "The bot was stopped."
+msgstr "Бот был остановлен."
 
-msgid "You stripped the bot's protections."
-msgstr "Вы сняли все защиты с бота."
+msgid "You ran out of fuel."
+msgstr "Вы лишились бензина."
 
-msgid "The bot stripped your protections."
-msgstr "Бот снял все защиты с вас."
+msgid "The bot ran out of fuel."
+msgstr "Бот лишился бензина."
+
+msgid "You must pump up your tire."
+msgstr "Вы должны накачать колесо."
+
+msgid "The bot must pump up its tire."
+msgstr "Бот должен накачать колесо."
+
+msgid "You had an accident."
+msgstr "Вы попали в аварию."
+
+msgid "The bot had an accident."
+msgstr "Бот попал в аварию."
+
+msgid "You were turned back."
+msgstr "Вы были развёрнуты назад."
+
+msgid "The bot was turned back."
+msgstr "Бот был развёрнут назад."
+
+msgid "You were speed-limited."
+msgstr "Вы были ограничены в скорости."
+
+msgid "The bot was speed-limited."
+msgstr "Бот был ограничен в скорости."
+
+msgid "You skip a turn."
+msgstr "Вы пропускаете ход."
+
+msgid "The bot skips a turn."
+msgstr "Бот пропускает ход."
+
+msgid "You fell from the saddle."
+msgstr "Вы упали с седла."
+
+msgid "The bot fell from the saddle."
+msgstr "Бот упал с седла."
+
+msgid "You must feed your horse."
+msgstr "Вы должны покормить лошадь."
+
+msgid "The bot must feed its horse."
+msgstr "Бот должен покормить лошадь."
+
+msgid "You must shoe your horse."
+msgstr "Вы должны подковать лошадь."
+
+msgid "The bot must shoe its horse."
+msgstr "Бот должен подковать лошадь."
+
+msgid "You must give your horse a rest."
+msgstr "Вы должны дать лошади отдохнуть."
+
+msgid "The bot must give its horse a rest."
+msgstr "Бот должен дать лошади отдохнуть."
+
+msgid "You protected yourself from falling from the saddle."
+msgstr "Вы защитились от падений с седла."
+
+msgid "The bot protected itself from falling from the saddle."
+msgstr "Бот защитился от падений с седла."
+
+msgid "You protected your horse from hunger."
+msgstr "Вы защитили лошадь от голода."
+
+msgid "The bot protected its horse from hunger."
+msgstr "Бот защитил лошадь от голода."
+
+msgid "You protected your horse from losing its horseshoe."
+msgstr "Вы защитили лошадь от потери подковы."
+
+msgid "The bot protected its horse from losing its horseshoe."
+msgstr "Бот защитил лошадь от потери подковы."
+
+msgid "You protected your horse from exhaustion."
+msgstr "Вы защитили лошадь от усталости."
+
+msgid "The bot protected its horse from exhaustion."
+msgstr "Бот защитил лошадь от усталости."
+
+msgid "You protected yourself from being turned back."
+msgstr "Вы защитились от разворота."
+
+msgid "The bot protected itself from being turned back."
+msgstr "Бот защитился от разворота."
+
+msgid "You protected yourself from the speed limit."
+msgstr "Вы защитились от ограничения скорости."
+
+msgid "The bot protected itself from the speed limit."
+msgstr "Бот защитился от ограничения скорости."
+
+msgid "You protected yourself from skipping a turn."
+msgstr "Вы защитились от пропуска хода."
+
+msgid "The bot protected itself from skipping a turn."
+msgstr "Бот защитился от пропуска хода."
+
+msgid "You lost all your protections."
+msgstr "Вы лишились всех защит."
+
+msgid "The bot lost all its protections."
+msgstr "Бот лишился всех защит."
 
 msgid "You are at the finish line. Congratulations!"
 msgstr "Вы на финише. Поздравляем!"
