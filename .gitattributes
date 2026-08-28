@@ -1,0 +1,4 @@
+* text=auto
+*.rb text eol=lf
+*.json text eol=lf
+*.po text eol=lf

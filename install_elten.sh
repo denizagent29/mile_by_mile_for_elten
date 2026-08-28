@@ -53,5 +53,14 @@ mkdir -p "$APPS_DIR"
 cp -r "$SRC" "$DEST"
 rm -f "$DEST/README.md"
 
+# Elten 3.0.1's Elten3AppInfo parser chokes on CRLF: the closing marker
+# regex misses a trailing \r and the program shows as "incompatible".
+# Git for Windows checks out with CRLF by default, so force LF on install.
+if command -v sed >/dev/null 2>&1; then
+  find "$DEST" -type f \( -name '*.rb' -o -name '*.json' -o -name '*.po' \) -exec sed -i 's/\r$//' {} + 2>/dev/null || true
+else
+  echo "warning: sed not found — CRLF not normalized, Elten may flag the app as incompatible" >&2
+fi
+
 echo "Installed $APP_NAME -> $DEST"
 echo "Restart Elten (Выход → Перезагрузить) to pick it up."

@@ -46,6 +46,13 @@ Linux: `$XDG_DATA_HOME`/`~/.local/share`). A `.mo` that is older than its
 `.po` is rebuilt automatically when `ruby` is available. Restart Elten
 (Выход → Перезагрузить) to pick the app up.
 
+**Windows gotcha (CRLF):** Elten 3.0.1's `Elten3AppInfo` parser fails on
+CRLF line endings — the closing `=end Elten3AppInfo` regex misses the
+trailing `\r` and the program is flagged "incompatible" in the program
+manager. Git for Windows checks out with CRLF by default. `.gitattributes`
+forces LF for `.rb`/`.json`/`.po`, and `install_elten.sh` normalizes the
+installed copy to LF as a safety net, so this is handled automatically.
+
 ## Bot AI
 
 Turn priority: 1) repair/start/un-reverse your own car, 2) play a safety
