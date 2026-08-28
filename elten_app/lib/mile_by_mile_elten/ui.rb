@@ -23,8 +23,9 @@ module MileByMileElten
 
     # В Elten 3.0 функциональные клавиши распознаются только по VK-коду
     # (символы вида :key_f2 дают keycode 0 и никогда не срабатывают).
+    # F3 не берём: он занят Элтеном (свернуть окно в трей).
     KEY_F2 = 0x71
-    KEY_F3 = 0x72
+    KEY_F4 = 0x73
 
     IMMOBILIZING = %i[stall empty_tank flat_tire accident].freeze
 
@@ -187,8 +188,6 @@ module MileByMileElten
       @bot = Bot.new(@game, @bot_player)
 
       @move_history = []
-      @pending_bot_actions = []
-      @pending_draw_message = nil
 
       @audio.welcome
       alert(start_announcement, false)
@@ -250,7 +249,6 @@ module MileByMileElten
     def play_rounds
       until @game.finished?
         if @game.current_player.equal?(@human)
-          announce_turn_start
           return :aborted if human_turn == :aborted
         else
           return :aborted if bot_turn == :aborted
@@ -280,32 +278,30 @@ module MileByMileElten
 
         play_card_audio(card, result, @human, target, ctx)
         action = record_move(@human, card, target: target, result: result)
+        # карта добрана сразу после хода — озвучиваем тут же, как в ухе
         drawn = (@human.hand - before).first
-        @pending_draw_message = drawn ? draw_phrase(@human, drawn) : nil
+        line = drawn ? "#{action} #{draw_phrase(@human, drawn)}" : action
 
         if @game.finished?
           alert(action, false)
           return nil
-        elsif @game.current_player.equal?(@human)
-          # карта сохранила ход (первая защита) — анонсируем и продолжаем
-          alert(action, false)
         else
-          alert("#{action} #{_('The bot moves.')}", false)
-          return nil
+          alert(line, true)
+          return nil unless @game.current_player.equal?(@human)
         end
       end
     end
 
     # Список карт руки на ListBox внутри Runner: Enter выбирает карту,
-    # F2/F3/Escape активны всё время хода. Возвращает карту или :aborted.
+    # F2/F4/Escape активны всё время хода. Возвращает карту или :aborted.
     def pick_card
       loop do
         options = @human.hand.map { |c| _(c.name) }
-        header = "#{_('Your turn')}. #{status_for(@human.car)}"
+        header = _('Your turn')
         picked = nil
         runner = Runner.new
         runner.on_key(KEY_F2) { safely { say_last_move } }
-        runner.on_key(KEY_F3) { safely { say_status } }
+        runner.on_key(KEY_F4) { safely { say_status } }
         runner.on_key(:key_escape) do |current|
           current.stop(:aborted) if confirm(_('End the game?'))
         end
@@ -341,37 +337,24 @@ module MileByMileElten
       end
 
       play_card_audio(card, result, @bot_player, target, ctx)
-      (@pending_bot_actions ||= []) << record_move(@bot_player, card, target: target, result: result)
+      # ход бота озвучивается сразу, как событие (wait: блокируем, чтобы
+      # «Ваш ход» в следующем списке не перебил его) — как в ухе
+      alert(record_move(@bot_player, card, target: target, result: result), true)
       nil
     end
 
     # Пауза перед ходом бота: рандом 2-4 секунды (сложный выбор — до ~5.5).
-    # В это время F2/F3/Escape активны. Анонс «Бот думает...» не перебивает
-    # предыдущую речь (stop: false).
+    # В это время F2/F4/Escape активны. Ничего не озвучиваем — сам ход бота
+    # проговорится сразу после паузы (как в ухе).
     def bot_think
       runner = Runner.new
       runner.on_key(KEY_F2) { safely { say_last_move } }
-      runner.on_key(KEY_F3) { safely { say_status } }
+      runner.on_key(KEY_F4) { safely { say_status } }
       runner.on_key(:key_escape) do |current|
         current.stop(:aborted) if confirm(_('End the game?'))
       end
       runner.after(@bot.think_duration) { |current| current.stop }
-      speak(_('The bot is thinking...'), stop: false)
       runner.run == :aborted ? :aborted : nil
-    end
-
-    # Озвучка перед ходом человека: что сделал бот, что вы взяли, ваш ход.
-    def announce_turn_start
-      # стартовый анонс уже назвал первого ходящего — повторять «Ваш ход» не нужно
-      return if @move_history.empty?
-
-      parts = []
-      parts.concat(@pending_bot_actions) unless @pending_bot_actions.nil?
-      parts << @pending_draw_message
-      parts << _('Your turn.')
-      alert(parts.compact.join(' '), true)
-      @pending_bot_actions = []
-      @pending_draw_message = nil
     end
 
     # --- история ходов и статусы ---
@@ -526,7 +509,7 @@ module MileByMileElten
       end
     end
 
-    # F3: дистанция и можно ли ехать (что мешает — если мешает)
+    # F4: дистанция и можно ли ехать (что мешает — если мешает)
     def say_status
       return speak(_('No game in progress.')) unless @human && @game
 
@@ -554,13 +537,7 @@ module MileByMileElten
       blockers
     end
 
-    # Короткий статус для заголовка списка карт: «1000 миль, Можно ехать».
-    def status_for(car)
-      blockers = move_blockers(car)
-      ([_('%{d} miles') % { d: car.distance }] + (blockers.empty? ? [_('You can move.')] : blockers)).join(', ')
-    end
-
-    # Обёртка для обработчиков F2/F3: ни одно исключение не должно вылететь
+    # Обёртка для обработчиков F2/F4: ни одно исключение не должно вылететь
     # из обработчика клавиш внутрь Runner (защита от вылета Elten).
     def safely
       yield
@@ -592,7 +569,7 @@ module MileByMileElten
         _('Remedy cards fix your own car: start the engine, refuel, fix the tire, repair after accident, end of U-turn, end of speed limit.'),
         _('Safety cards are played on yourself once and permanently block one kind of hazard. Playing one for the first time keeps your turn.'),
         _("If a card can't take effect (for example, refueling a full tank), it is simply discarded and the turn passes on."),
-        _('During the game: F2 — the last move, F3 — your distance and whether you can move. Escape — end the game.')
+        _('During the game: F2 — the last move, F4 — your distance and whether you can move. Escape — end the game.')
       ].join("\n\n"), header: _('Rules'))
     end
   end
