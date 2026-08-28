@@ -7,11 +7,16 @@ module MileByMile
 
     attr_reader :players, :deck, :discard_pile, :distance_target, :current_index
 
-    def initialize(players, distance_target: 1000, include_remove_all_safeties: false, deck_class: Deck, deck_mode: :shared, deck_copies: 1)
+    def initialize(players, distance_target: 1000, include_remove_all_safeties: false, deck_class: Deck, deck_mode: :shared, deck_copies: 1, seed: nil)
       raise ArgumentError, 'need at least 2 players' if players.size < 2
       raise ArgumentError, "unknown deck_mode: #{deck_mode}" unless %i[shared separate].include?(deck_mode)
       deck_copies = deck_copies.to_i
       raise ArgumentError, 'deck_copies must be at least 1' if deck_copies < 1
+
+      # Один PRNG на всю партию: при заданном сиде оба игрока в мультиплеере
+      # получают одинаковые колоды, одинаковые руки и одного первого ходящего.
+      # При seed: nil ведём себя как раньше — колоды тасуются независимо.
+      @rng = seed.nil? ? Random.new : Random.new(seed)
 
       @players = players
       @distance_target = distance_target
@@ -21,14 +26,16 @@ module MileByMile
         # своя колода у каждого игрока: раздача и добор идут из своей колоды
         @deck = nil
         players.each do |player|
-          player.deck = deck_class.new(include_remove_all_safeties: include_remove_all_safeties).shuffle!
+          deck_seed = seed.nil? ? nil : @rng.rand(2**32 - 1)
+          # сид передаётся в колоду: пополнение из сброса тоже детерминировано
+          player.deck = deck_class.new(include_remove_all_safeties: include_remove_all_safeties, seed: deck_seed).shuffle!
           6.times { player.hand << player.deck.draw }
         end
       else
-        @deck = deck_class.new(include_remove_all_safeties: include_remove_all_safeties, copies: deck_copies).shuffle!
+        @deck = deck_class.new(include_remove_all_safeties: include_remove_all_safeties, copies: deck_copies, seed: seed).shuffle!
         @deck.deal(@players, 6)
       end
-      @current_index = rand(@players.size)
+      @current_index = @rng.rand(@players.size)
       # стартовый игрок берёт седьмую карту (как в ухе)
       draw_for(current_player)
     end
@@ -68,6 +75,22 @@ module MileByMile
       else
         raise RuleViolation, "unknown card type: #{card.class}"
       end
+    end
+
+    # Воспроизвести ход из сигнала мультиплеера. card_index — индекс карты
+    # в руке ТЕКУЩЕГО игрока (движок на приёмной стороне в той же фазе, что
+    # и у отправителя), target — :self, :opponent или nil. Оба клиента гоняют
+    # идентичный движок, поэтому результат совпадает с отправителем.
+    def apply_move(card_index, target = nil)
+      player = current_player
+      raise RuleViolation, 'invalid move card index' if card_index.nil? || card_index < 0 || card_index >= player.hand.size
+
+      target_player =
+        case target
+        when :self then player
+        when :opponent then players.find { |p| !p.equal?(player) }
+        end
+      play(player.hand[card_index], target: target_player)
     end
 
     private

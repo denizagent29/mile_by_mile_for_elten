@@ -146,22 +146,36 @@ module MileByMileElten
     def initialize(program)
       @program = program
       @audio = Audio.new(program)
+      # очередь входящих сигналов мультиплеера [user, packet]; сигналы кладёт
+      # ProgramMileByMile#signaled, а хендлеры разбирают её в своих Runner-циклах
+      @inbox = []
+      @multiplayer = false
     end
 
     def main
       loop do
         index = selector(
-          [_('Play against the bot'), _('Rules'), _('Exit')],
+          [_('Play against the bot'), _('Multiplayer'), _('Rules'), _('Exit')],
           header: _('Mile by Mile'),
           start_index: 0,
-          cancel_index: 2
+          cancel_index: 3
         )
         case index
         when 0 then play_vs_bot
-        when 1 then show_help
+        when 1 then multiplayer_menu
+        when 2 then show_help
         else break
         end
       end
+    end
+
+    # Входящий сигнал от ProgramMileByMile#signaled (вызывается из loop.rb
+    # на $scene). Публичный интерфейс с Program: кладём пакет в очередь,
+    # Runner того экрана, который ждёт нужный пакет, разберёт её в on_tick.
+    def handle_signal(user, packet)
+      return unless packet.is_a?(Hash)
+
+      @inbox << [user, packet.transform_keys { |k| k.to_s.to_sym }]
     end
 
     private
@@ -259,6 +273,307 @@ module MileByMileElten
         end
       end
       nil
+    end
+
+    # --- мультиплеер ---
+
+    # Ожидание нужного сигнала в Runner: F2/F4 активны, Escape — отмена,
+    # timeout секунд — выход по таймауту. Блок получает [user, packet] и
+    # возвращает true, когда пакет «наш». Найденный пакет удаляется из
+    # очереди, чтобы не перехватывался повторно. Возвращает [user, packet],
+    # :timeout или :cancelled.
+    def wait_for_signals(timeout: 60, cancel_text: _('Cancel waiting?'))
+      runner = Runner.new
+      runner.on_key(KEY_F2) { safely { say_last_move } }
+      runner.on_key(KEY_F4) { safely { say_status } }
+      runner.on_key(:key_escape) { |current| current.stop(:cancelled) if confirm(cancel_text) }
+      runner.after(timeout) { |current| current.stop(:timeout) }
+      found = nil
+      runner.on_tick do |current|
+        i = @inbox.index { |user, pkt| yield(user, pkt) }
+        next unless i
+
+        found = @inbox.delete_at(i)
+        current.stop
+      end
+      runner.run
+      found
+    end
+
+    def multiplayer_menu
+      loop do
+        index = selector(
+          [_('Create a game'), _('Wait for an invitation'), _('Back')],
+          header: _('Multiplayer'),
+          start_index: 0,
+          cancel_index: 2
+        )
+        case index
+        when 0
+          return if host_game == :played
+        when 1
+          return if wait_for_invite == :played
+        else
+          return
+        end
+      end
+    end
+
+    # Хост: ввести ник соперника → проверить карточку → пригласить → ждать
+    # accept → собрать игру → старт. Возвращает :played или :cancelled.
+    def host_game
+      nick = input_text(_('Opponent nickname'), escapable: true, text: '')
+      return :cancelled if nick.nil? || nick.strip.empty?
+
+      nick = nick.strip
+      card = user_card(nick)
+      if card.nil?
+        alert(_('Cannot verify the user. Check the connection.'), false)
+        return :cancelled
+      end
+      if card.name.to_s.empty?
+        alert(_('There is no user with this name.'), false)
+        return :cancelled
+      end
+      unless card.status.online
+        return :cancelled unless confirm(_('The user is offline. Send the invitation anyway?'))
+      end
+
+      settings = choose_settings
+      return :cancelled if settings.nil?
+
+      variant, distance, deck_mode, deck_copies = settings
+      @room = new_room
+      @program.signal(nick, { room: @room, type: 'invite', variant: variant,
+                              distance_target: distance, deck_mode: deck_mode, deck_copies: deck_copies })
+
+      result = wait_for_signals(cancel_text: _('Cancel waiting?')) do |user, pkt|
+        (pkt[:type] == 'accept' || pkt[:type] == 'decline') && user == nick && pkt[:room] == @room
+      end
+      if result.nil? || result == :timeout || result == :cancelled
+        alert(_('No response from %{nick}.') % { nick: nick }, false)
+        return :cancelled
+      end
+      if result[1][:type] == 'decline'
+        alert(_('%{nick} declined the invitation.') % { nick: nick }, false)
+        return :cancelled
+      end
+
+      seed = rand(2**31)
+      @variant = variant
+      @audio.variant = variant
+      @multiplayer = true
+      @human = Player.new(_('You'))
+      @opponent = Player.new(nick)
+      @game = build_mp_game([@human, @opponent], variant, distance, deck_mode, deck_copies, seed)
+      @move_history = []
+
+      @program.signal(nick, { room: @room, type: 'start', seed: seed, first: @game.current_index })
+
+      @audio.welcome
+      alert(start_announcement_mp, false)
+      finish_mp_rounds
+      @multiplayer = false
+      :played
+    end
+
+    # Гость: ждать invite → принять/отклонить → ждать start → собрать игру.
+    def wait_for_invite
+      result = wait_for_signals(cancel_text: _('Exit waiting for invitations?')) do |_user, pkt|
+        pkt[:type] == 'invite'
+      end
+      return :cancelled if result.nil? || result == :timeout || result == :cancelled
+
+      host_nick, pkt = result
+      variant = (pkt[:variant] || :cars).to_sym
+      distance = pkt[:distance_target] || 1000
+      deck_mode = (pkt[:deck_mode] || :shared).to_sym
+      deck_copies = (pkt[:deck_copies] || 1).to_i
+      @room = pkt[:room]
+
+      invite_text = (_('%{nick} invites you: %{settings}. Accept?') %
+                     { nick: host_nick, settings: describe_settings(variant, distance, deck_mode, deck_copies) })
+      unless confirm(invite_text)
+        @program.signal(host_nick, { room: @room, type: 'decline' })
+        return :cancelled
+      end
+      @program.signal(host_nick, { room: @room, type: 'accept' })
+
+      start_res = wait_for_signals(timeout: 120, cancel_text: _('Cancel waiting for the start?')) do |user, p2|
+        p2[:type] == 'start' && p2[:room] == @room && user == host_nick
+      end
+      return :cancelled if start_res.nil? || start_res == :timeout || start_res == :cancelled
+
+      start = start_res[1]
+      seed = start[:seed] || rand(2**31)
+      @variant = variant
+      @audio.variant = variant
+      @multiplayer = true
+      @human = Player.new(_('You'))
+      @opponent = Player.new(host_nick)
+      @game = build_mp_game([@opponent, @human], variant, distance, deck_mode, deck_copies, seed)
+      @move_history = []
+
+      unless @game.current_index == start[:first]
+        alert(_('The game is out of sync. Return to the menu.'), false)
+        @multiplayer = false
+        return :cancelled
+      end
+
+      @audio.welcome
+      alert(start_announcement_mp, false)
+      finish_mp_rounds
+      @multiplayer = false
+      :played
+    end
+
+    def build_mp_game(players, variant, distance, deck_mode, deck_copies, seed)
+      deck_class = variant == :horses ? Variants::HorseDeck : Deck
+      Game.new(players, distance_target: distance, deck_class: deck_class,
+                        deck_mode: deck_mode, deck_copies: deck_copies, seed: seed)
+    end
+
+    def describe_settings(variant, distance, deck_mode, deck_copies)
+      parts = []
+      parts << (variant == :horses ? _('On horses') : _('On cars'))
+      parts << (_('%{d} miles') % { d: distance })
+      parts << (deck_mode == :separate ? _('Each player has their own deck') : _(DECK_LABELS[deck_copies]))
+      parts.join(', ')
+    end
+
+    def start_announcement_mp
+      if @game.current_player.equal?(@human)
+        _('By fate\'s will, you move first.')
+      else
+        (_('By fate\'s will, %{nick} moves first.') % { nick: @opponent.name })
+      end
+    end
+
+    # Цикл партии мультиплеера: ходит тот, кому по движку принадлежит ход.
+    # :aborted — игрок вышел (Escape, таймаут, соперник ушёл).
+    def finish_mp_rounds
+      aborted = false
+      until @game.finished?
+        if @game.current_player.equal?(@human)
+          aborted = true if mp_human_turn == :aborted
+        else
+          aborted = true if mp_opponent_turn == :aborted
+        end
+        break if aborted
+      end
+      if aborted
+        send_mp_bye
+        alert(_('The game is over.'), true)
+      else
+        announce_mp_result
+      end
+    end
+
+    # Ход игрока в мультиплеере: как human_turn, но ход уходит сопернику.
+    def mp_human_turn
+      loop do
+        return nil if @human.hand.empty?
+
+        card = pick_card
+        return :aborted if card == :aborted
+
+        target = card.opponent_only? ? @opponent : nil
+        before = @human.hand.dup
+        idx = before.index(card)
+        ctx = play_context(@human, target)
+        begin
+          result = @game.play(card, target: target)
+        rescue MileByMile::Game::RuleViolation => e
+          alert(e.message, false)
+          next
+        end
+
+        send_mp_move(idx, card)
+        play_card_audio(card, result, @human, target, ctx)
+        action = record_move(@human, card, target: target, result: result)
+        drawn = (@human.hand - before).first
+        line = drawn ? "#{action} #{draw_phrase(@human, drawn)}" : action
+
+        if @game.finished?
+          alert(action, false)
+          return nil
+        else
+          alert(line, true)
+          return nil unless @game.current_player.equal?(@human)
+        end
+      end
+    end
+
+    # Ход соперника: ждём move, применяем к своему движку, озвучиваем.
+    def mp_opponent_turn
+      result = wait_for_signals(timeout: 300, cancel_text: _('End the game?')) do |_user, pkt|
+        (pkt[:type] == 'move' || pkt[:type] == 'bye') && pkt[:room] == @room
+      end
+      return :aborted if result.nil? || result == :timeout || result == :cancelled
+
+      pkt = result[1]
+      return :aborted if pkt[:type] == 'bye'
+
+      apply_opponent_move(pkt)
+      nil
+    end
+
+    # Применить ход соперника к локальному движку и озвучить, как в ухе.
+    def apply_opponent_move(pkt)
+      human_before = @human.hand.dup
+      opp_dist_before = @opponent.car.distance
+      ctx = {
+        prev_distance: opp_dist_before,
+        target_was_running: @human.car.running?,
+        target_safeties: @human.car.safeties.size
+      }
+      result = @game.apply_move(pkt[:card_index], pkt[:target] == 'opponent' ? :opponent : nil)
+      card = @game.discard_pile.last
+      target = card.opponent_only? ? @human : nil
+      play_card_audio(card, result, @opponent, target, ctx)
+      action = record_move(@opponent, card, target: target, result: result)
+      drawn = (@human.hand - human_before).first
+      line = drawn ? "#{action} #{draw_phrase(@human, drawn)}" : action
+      alert(line, true)
+    end
+
+    def send_mp_move(card_index, card)
+      target = card.opponent_only? ? 'opponent' : nil
+      @program.signal(@opponent.name, { room: @room, type: 'move', card_index: card_index, target: target })
+    end
+
+    def send_mp_bye
+      @program.signal(@opponent.name, { room: @room, type: 'bye' })
+    end
+
+    def announce_mp_result
+      winner = @game.winner
+      if winner.equal?(@human)
+        alert(_('You are at the finish line. Congratulations!'), true)
+      elsif winner
+        alert((_('%{nick} is at the finish line.') % { nick: @opponent.name }), true)
+      else
+        alert(_('The deck ran out. Draw.'), true)
+      end
+    end
+
+    def new_room
+      format('mp-%x-%x', Time.now.to_i, rand(2**31))
+    end
+
+    def user_card(nick)
+      EltenLink::Profiles.card(EltenLink.client(@program), nick)
+    rescue StandardError
+      nil
+    end
+
+    # В мультиплеере у соперника не «бот», а ник: подменяем локализованное
+    # «The bot» в готовой фразе на имя игрока.
+    def localize_subject(text, player)
+      return text unless @multiplayer
+      return text if player.equal?(@human)
+
+      text.sub(_('The bot'), player.name)
     end
 
     # --- ход игрока ---
@@ -374,6 +689,7 @@ module MileByMileElten
 
     def record_move(player, card, target: nil, result:)
       text = action_phrase(player, card, target: target, result: result)
+      text = localize_subject(text, player)
       @move_history << text
       @move_history.shift if @move_history.size > 100
       text
@@ -505,12 +821,14 @@ module MileByMileElten
 
     def draw_phrase(player, card)
       me = player.equal?(@human)
-      me ? _('You drew %{card}.') % { card: _(card.name) } : _('The bot drew %{card}.') % { card: _(card.name) }
+      text = me ? _('You drew %{card}.') % { card: _(card.name) } : _('The bot drew %{card}.') % { card: _(card.name) }
+      localize_subject(text, player)
     end
 
     def discard_phrase(player, card)
       me = player.equal?(@human)
-      me ? _('You discarded %{card}.') % { card: _(card.name) } : _('The bot discarded %{card}.') % { card: _(card.name) }
+      text = me ? _('You discarded %{card}.') % { card: _(card.name) } : _('The bot discarded %{card}.') % { card: _(card.name) }
+      localize_subject(text, player)
     end
 
     # F2: последний ход

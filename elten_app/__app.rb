@@ -30,8 +30,22 @@ require_relative "lib/mile_by_mile_elten/ui"
 
 class ProgramMileByMile < Program
   def main
-    MileByMileElten::UI.new(self).main
+    @ui = MileByMileElten::UI.new(self)
+    @ui.main
   ensure
     finish
+  end
+
+  # Мультиплеер: сигналы. В базе Program signal/signaled могут быть
+  # protected — переопределяем как public, чтобы приём из loop.rb ($scene.
+  # signaled) и отправка из UI работали в любом случае.
+  public
+
+  def signal(user, packet)
+    super
+  end
+
+  def signaled(user, packet)
+    @ui&.handle_signal(user, packet)
   end
 end

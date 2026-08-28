@@ -407,3 +407,60 @@ msgstr "Odporność na utratę podkowy"
 
 msgid "Exhaustion immunity"
 msgstr "Odporność na wyczerpanie"
+
+msgid "Multiplayer"
+msgstr "Multiplayer"
+
+msgid "Create a game"
+msgstr "Utwórz grę"
+
+msgid "Wait for an invitation"
+msgstr "Czekaj na zaproszenie"
+
+msgid "Back"
+msgstr "Wstecz"
+
+msgid "Opponent nickname"
+msgstr "Nick przeciwnika"
+
+msgid "Cannot verify the user. Check the connection."
+msgstr "Nie można zweryfikować użytkownika. Sprawdź połączenie."
+
+msgid "There is no user with this name."
+msgstr "Nie ma użytkownika o takiej nazwie."
+
+msgid "The user is offline. Send the invitation anyway?"
+msgstr "Użytkownik jest offline. Mimo to wysłać zaproszenie?"
+
+msgid "No response from %{nick}."
+msgstr "Brak odpowiedzi od %{nick}."
+
+msgid "%{nick} declined the invitation."
+msgstr "%{nick} odrzucił zaproszenie."
+
+msgid "Cancel waiting?"
+msgstr "Przerwać oczekiwanie?"
+
+msgid "Exit waiting for invitations?"
+msgstr "Wyjdź z oczekiwania na zaproszenia?"
+
+msgid "%{nick} invites you: %{settings}. Accept?"
+msgstr "%{nick} zaprasza cię: %{settings}. Przyjąć?"
+
+msgid "Cancel waiting for the start?"
+msgstr "Przerwać oczekiwanie na start?"
+
+msgid "The game is out of sync. Return to the menu."
+msgstr "Gra rozsynchronizowała się. Powrót do menu."
+
+msgid "By fate's will, %{nick} moves first."
+msgstr "Z woli losu pierwszy rusza %{nick}."
+
+msgid "The game is over."
+msgstr "Gra zakończona."
+
+msgid "%{nick} is at the finish line."
+msgstr "%{nick} jest na mecie."
+
+msgid "The bot"
+msgstr "Bot"

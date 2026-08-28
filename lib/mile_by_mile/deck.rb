@@ -6,15 +6,22 @@ module MileByMile
     HAZARD_TYPES = %i[stall empty_tank flat_tire accident turned_back speed_limit].freeze
     REMEDY_TYPES = %i[refuel repair_tire repair turn_forward remove_speed_limit].freeze
 
-    def initialize(include_remove_all_safeties: false, copies: 1)
+    def initialize(include_remove_all_safeties: false, copies: 1, seed: nil)
       copies = copies.to_i
       copies = 1 if copies < 1
       @cards = build(include_remove_all_safeties)
       @cards = Array.new(copies) { build(include_remove_all_safeties) }.flatten if copies > 1
+      # сид живёт в колоде, чтобы и пополнение из сброса (refill_from)
+      # оставалось детерминированным — оба клиента тасуют одинаково
+      @rng = seed.nil? ? nil : Random.new(seed)
     end
 
-    def shuffle!
-      @cards.shuffle!
+    # seed делает тасовку детерминированной — оба игрока в мультиплеере
+    # получают одинаковую колоду, передав один и тот же сид. Без сида (или
+    # когда колода создана без сида) — случайно, как раньше.
+    def shuffle!(seed: nil)
+      rng = seed.nil? ? (@rng || Random.new) : Random.new(seed)
+      @cards.shuffle!(random: rng)
       self
     end
 

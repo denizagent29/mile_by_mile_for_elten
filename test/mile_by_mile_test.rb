@@ -288,4 +288,68 @@ class MileByMileTest < Minitest::Test
     refute game.deck.empty? # колода наполнилась из сброса
     assert_equal 1, game.discard_pile.size
   end
+
+  # Мультиплеер: один и тот же сид у хоста и соперника даёт идентичную
+  # партию — один первый ходящий, одинаковые руки и одинаковый порядок колоды.
+  def test_seed_gives_identical_games
+    seed = 42
+    gh, hh, oh = seeded_game(seed)
+    gg, hg, og = seeded_game(seed)
+
+    assert_equal gh.current_player.name, gg.current_player.name
+    assert_equal hh.hand.map(&:name), hg.hand.map(&:name)
+    assert_equal oh.hand.map(&:name), og.hand.map(&:name)
+    assert_equal gh.deck.instance_variable_get(:@cards).map(&:name),
+                 gg.deck.instance_variable_get(:@cards).map(&:name)
+  end
+
+  # Разные сиды дают разные партии (тасовка реально зависит от сида).
+  def test_different_seeds_differ
+    gh, = seeded_game(1)
+    gg, = seeded_game(2)
+    refute_equal gh.deck.instance_variable_get(:@cards).map(&:name),
+                 gg.deck.instance_variable_get(:@cards).map(&:name)
+  end
+
+  # apply_move воспроизводит ход по (card_index, target) на приёмной стороне.
+  # Движок берёт current_player сам — как в реальном мультиплеере, где фаза
+  # обоих клиентов совпадает.
+  def test_apply_move_reproduces_play
+    p1 = Player.new('Host')
+    p2 = Player.new('Guest')
+    game = Game.new([p1, p2], distance_target: 1000)
+    game.instance_variable_set(:@current_index, 0)
+    start = RemedyCard.new(:start)
+    p1.hand << start
+    idx = p1.hand.index(start)
+    assert_equal :played, game.apply_move(idx, nil)
+    assert p1.car.running?
+  end
+
+  # Хост и гость: скриптовая последовательность ходов применяется к обоим
+  # движкам, состояния совпадают после каждого шага.
+  def test_host_and_guest_stay_in_sync
+    seed = 12345
+    gh, hh, oh = seeded_game(seed)
+    gg, hg, og = seeded_game(seed)
+
+    sig = lambda do |g, h, o|
+      [g.current_player.name, h.hand.map(&:name), o.hand.map(&:name),
+       g.deck.instance_variable_get(:@cards).size, h.car.distance,
+       h.car.running?, o.car.distance, o.car.running?,
+       h.car.skip_turns, o.car.skip_turns]
+    end
+
+    [[0, nil], [1, :opponent], [2, nil], [0, :opponent], [1, nil], [2, nil]].each do |idx, target|
+      assert_equal gh.apply_move(idx, target), gg.apply_move(idx, target)
+      assert_equal sig.call(gh, hh, oh), sig.call(gg, hg, og)
+    end
+  end
+
+  def seeded_game(seed)
+    p1 = Player.new('Host')
+    p2 = Player.new('Guest')
+    game = Game.new([p1, p2], distance_target: 1000, deck_mode: :shared, deck_copies: 3, seed: seed)
+    [game, p1, p2]
+  end
 end

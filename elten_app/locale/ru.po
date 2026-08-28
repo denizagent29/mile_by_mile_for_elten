@@ -509,3 +509,60 @@ msgstr "Защита от потери подковы"
 
 msgid "Exhaustion immunity"
 msgstr "Защита от усталости"
+
+msgid "Multiplayer"
+msgstr "Мультиплеер"
+
+msgid "Create a game"
+msgstr "Создать игру"
+
+msgid "Wait for an invitation"
+msgstr "Ждать приглашение"
+
+msgid "Back"
+msgstr "Назад"
+
+msgid "Opponent nickname"
+msgstr "Ник соперника"
+
+msgid "Cannot verify the user. Check the connection."
+msgstr "Не удалось проверить пользователя. Проверьте соединение."
+
+msgid "There is no user with this name."
+msgstr "Пользователя с таким именем нет."
+
+msgid "The user is offline. Send the invitation anyway?"
+msgstr "Пользователь не в сети. Всё равно отправить приглашение?"
+
+msgid "No response from %{nick}."
+msgstr "Нет ответа от %{nick}."
+
+msgid "%{nick} declined the invitation."
+msgstr "%{nick} отклонил приглашение."
+
+msgid "Cancel waiting?"
+msgstr "Прервать ожидание?"
+
+msgid "Exit waiting for invitations?"
+msgstr "Выйти из ожидания приглашений?"
+
+msgid "%{nick} invites you: %{settings}. Accept?"
+msgstr "%{nick} приглашает вас: %{settings}. Принять?"
+
+msgid "Cancel waiting for the start?"
+msgstr "Прервать ожидание начала?"
+
+msgid "The game is out of sync. Return to the menu."
+msgstr "Игра рассинхронизировалась. Возврат в меню."
+
+msgid "By fate's will, %{nick} moves first."
+msgstr "По воле судьбы первым ходит %{nick}."
+
+msgid "The game is over."
+msgstr "Игра окончена."
+
+msgid "%{nick} is at the finish line."
+msgstr "%{nick} на финише."
+
+msgid "The bot"
+msgstr "Бот"
