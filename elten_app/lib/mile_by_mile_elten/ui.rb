@@ -51,6 +51,12 @@ module MileByMileElten
 
     private
 
+    # Elten's gettext reads .mo strings as ASCII-8BIT; re-tag to UTF-8 so
+    # join/% with UTF-8 literals don't raise Encoding::CompatibilityError.
+    def _(msgid)
+      super(msgid).dup.force_encoding(Encoding::UTF_8)
+    end
+
     def play_vs_bot
       settings = choose_settings
       return if settings.nil?
