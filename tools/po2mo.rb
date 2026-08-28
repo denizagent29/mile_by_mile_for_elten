@@ -83,15 +83,15 @@ def write_mo(entries, path)
   originals.each do |s|
     bytes = s.b
     out << [bytes.bytesize, offset].pack('V2')
-    offset += bytes.bytesize
+    offset += bytes.bytesize + 1 # Elten's loadmo reads [offset..offset+len] and splits on \0
   end
   translations.each do |s|
     bytes = s.b
     out << [bytes.bytesize, offset].pack('V2')
-    offset += bytes.bytesize
+    offset += bytes.bytesize + 1
   end
-  out << originals.join.b
-  out << translations.join.b
+  out << originals.map { |s| s.b + "\0".b }.join.b
+  out << translations.map { |s| s.b + "\0".b }.join.b
   File.binwrite(path, out)
 end
 
