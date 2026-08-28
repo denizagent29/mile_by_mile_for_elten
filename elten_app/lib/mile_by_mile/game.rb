@@ -176,18 +176,11 @@ module MileByMile
       end
 
       tcar.apply_hazard!(card.type)
-      if card.type == :skip_turn
-        # ухо: карта «пропуск хода» перескакивает через цель сразу (та теряет
-        # ход прямо сейчас), а накопленный счётчик сработает, когда очередь
-        # дойдёт до цели — то есть цель пропускает ход ещё раз
-        player.discard(card, discard_pile)
-        @current_index = (@players.index(target) + 1) % players.size
-        consume_skips_for_current!
-        draw_for(current_player)
-        :played
-      else
-        discard_played(player, card)
-      end
+      # карта «пропуск хода»: цель пропускает ровно один ход — следующий.
+      # advance_turn! подводит очередь к цели, и consume_skips_for_current!
+      # сразу съедает накопленный пропуск, возвращая ход играющему (в паре
+      # это единственный лишний ход подряд, а не два — как в ухе)
+      discard_played(player, card)
     end
 
     def play_remove_all_safeties(player, card, target)

@@ -248,32 +248,20 @@ class MileByMileTest < Minitest::Test
     assert_equal 30, @p1.car.distance
   end
 
-  def test_skip_turn_stacks
+  # «Пропуск хода»: цель пропускает ровно один ход — следующий. advance_turn!
+  # съедает пропуск сразу, поэтому после розыгрыша ход снова у p1, а следующая
+  # обычная карта p1 передаёт ход p2 как обычно (никакого двойного пропуска).
+  def test_skip_turn_skips_targets_next_turn
     skip1 = HazardCard.new(:skip_turn)
-    skip2 = HazardCard.new(:skip_turn)
-    @p1.hand.concat([skip1, skip2])
-
+    @p1.hand << skip1
     @game.play(skip1, target: @p2)
-    assert_equal 1, @p2.car.skip_turns
-    assert_equal @p1, @game.current_player # перескочили через p2, ход снова p1
-
-    @game.play(skip2, target: @p2)
-    assert_equal 2, @p2.car.skip_turns
+    assert_equal 0, @p2.car.skip_turns
     assert_equal @p1, @game.current_player
 
-    # p1 ходит обычной картой — p2 пропускает ход, счётчик уменьшается
-    start = RemedyCard.new(:start)
-    @p1.hand << start
-    @game.play(start)
-    assert_equal 1, @p2.car.skip_turns
-    assert_equal @p1, @game.current_player
-
-    # ещё одна карта p1 — p2 пропускает второй ход
     d25 = DistanceCard.new(25)
     @p1.hand << d25
     @game.play(d25)
-    assert_equal 0, @p2.car.skip_turns
-    assert_equal @p1, @game.current_player
+    assert_equal @p2, @game.current_player
   end
 
   def test_deck_refill_keeps_last_discarded
