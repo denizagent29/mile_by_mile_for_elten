@@ -16,19 +16,35 @@ lib/mile_by_mile_elten/
   bot.rb                          — AI opponent
   audio.rb                        — play_app_sound wrapper, sound name contract
   ui.rb                           — menu, player/bot turns, help
-fuzz_bot_vs_bot.rb                — runs N bot-vs-bot games outside Elten
-                                     (catches crashes in bot logic against the real engine)
-harness_ui_smoke.rb               — runs the full MileByMileElten::UI class outside
-                                     Elten via stubs for _/selector/alert/EditBox
 Audio/                            — sound assets (flat, see naming note below)
 locale/                           — ru/pl gettext catalogs (po + compiled mo)
 ```
+Dev harnesses (bot-vs-bot fuzz, UI smoke) live in `../dev/`; the install
+script is `../install_elten.sh`; the engine sync script is `../sync_engine.sh`.
 
 ## Important: don't edit the engine here
 
 `lib/mile_by_mile/` inside `elten_app/` is a copy. Make changes in the
 top-level `lib/mile_by_mile/`, then run `../sync_engine.sh` to copy them
 here. Otherwise the two copies drift apart.
+
+## Installing into Elten (dev)
+
+The app is installed as an UNBUILT source folder — no `.eltenapp` packaging.
+Elten 3 loads folder apps from `apps/src/` directly, but only in developer
+mode (launch Elten with `/developer`, or use Выход → «Перезагрузить в режиме
+разработчика»). Dawid bundles and signs the app for release; for daily
+iteration this script is all we need:
+
+```bash
+sh install_elten.sh
+```
+
+It copies code, `Audio/` and `locale/` into
+`<appdata>/elten/apps/src/MileByMile` (Windows Git Bash: `%APPDATA%`;
+Linux: `$XDG_DATA_HOME`/`~/.local/share`). A `.mo` that is older than its
+`.po` is rebuilt automatically when `ruby` is available. Restart Elten
+(Выход → Перезагрузить) to pick the app up.
 
 ## Bot AI
 
@@ -42,7 +58,7 @@ that can't take effect is simply discarded instead of crashing the game).
 ## Testing the bot for crashes
 
 ```bash
-ruby fuzz_bot_vs_bot.rb 1000
+ruby dev/fuzz_bot_vs_bot.rb 1000
 ```
 
 Runs 1000 bot-vs-bot games outside the Elten runtime (engine only, no
@@ -50,7 +66,7 @@ Program/UI widgets needed), checking that the bot's decisions never
 raise an exception inside the game.
 
 ```bash
-ruby harness_ui_smoke.rb 100
+ruby dev/harness_ui_smoke.rb 100
 ```
 
 Runs 100 full games through the actual `MileByMileElten::UI` class
@@ -67,8 +83,9 @@ via `_(card.name)` in the UI layer — the engine itself
 (`lib/mile_by_mile`) has no gettext dependency, so it stays
 self-contained and testable outside Elten.
 
-Rebuild after editing a `.po` file (no `msgfmt` in this environment, so a
-minimal .po→.mo compiler lives at `tools/po2mo.rb`):
+`install_elten.sh` rebuilds a stale `.mo` from its `.po` automatically
+(no `msgfmt` here — a minimal .po→.mo compiler lives at `tools/po2mo.rb`).
+To rebuild by hand:
 
 ```bash
 ruby tools/po2mo.rb elten_app/locale/ru.po elten_app/locale/ru.mo
@@ -118,11 +135,10 @@ Naming scheme: `<variant>_<0|25|50|75|100|200>`, `<variant>_bibip`,
   EditBox dialog) instead of a hand-rolled `show_text` that did not exist
   in the Elten 3 API — opening Rules used to raise NoMethodError on a real
   runtime. The harness now exercises that path (regression check).
-- Sound assets moved from `audio/` to `Audio/`: both
-  `build-eltenapp.rb` (packages only `Audio/**` as sound records) and
-  `collect_physical_sound_assets` (scans the `Audio` folder at runtime)
-  match on the capital name, so the lowercase folder meant zero sounds in
-  a packaged app on case-sensitive platforms.
+- Sound assets moved from `audio/` to `Audio/`:
+  `collect_physical_sound_assets` scans the `Audio` folder at runtime and
+  matches on the capital name, so the lowercase folder meant zero sounds
+  on case-sensitive platforms (both as a source folder and once packaged).
 
 ## Next
 

@@ -229,7 +229,7 @@ GAMES.times do |i|
   end
 end
 
-# the F2/F3 handlers must produce speech without crashing
+# the F2/F4 handlers must produce speech without crashing
 ui = MileByMileElten::UI.new(FakeProgram.new)
 ui.instance_variable_set(:@human, MileByMile::Player.new('You'))
 ui.instance_variable_set(:@move_history, ['Bot moved 50 miles.'])
@@ -241,7 +241,7 @@ begin
   status_crashes = SPEECH.grep(/moved 50 miles/).empty? ? 1 : 0
 rescue StandardError => e
   status_crashes += 1
-  puts "F2/F3 CRASHED: #{e.class}: #{e.message}"
+  puts "F2/F4 CRASHED: #{e.class}: #{e.message}"
 end
 
 # the Rules screen must render via Elten's display_text
@@ -257,6 +257,6 @@ rescue StandardError => e
 end
 
 puts "Done: #{GAMES} games via the UI (human always plays the first card in hand), crashes: #{crashes}"
-puts "F2/F3 status speech: #{status_crashes.zero? ? 'yes' : 'NO'}"
+puts "F2/F4 status speech: #{status_crashes.zero? ? 'yes' : 'NO'}"
 puts "Rules screen rendered via display_text: #{help_crashes.zero? ? 'yes' : 'NO'}"
 exit(crashes.zero? && status_crashes.zero? && help_crashes.zero? ? 0 : 1)
