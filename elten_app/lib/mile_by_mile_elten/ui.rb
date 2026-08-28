@@ -159,23 +159,14 @@ module MileByMileElten
     end
 
     def show_help
-      show_text(_('Rules'), [
+      display_text([
         _('The goal is to be the first to cover the target distance exactly, without overshooting.'),
         _('Distance cards (25/50/75/100/200 miles) move you forward once your car is started and nothing blocks it.'),
         _('Hazard cards are played against an opponent: stall the engine, empty the tank, flat tire, accident, U-turn, speed limit, skip a turn.'),
         _('Remedy cards fix your own car: start the engine, refuel, fix the tire, repair after accident, end of U-turn, end of speed limit.'),
         _('Safety cards are played on yourself once and permanently block one kind of hazard. Playing one for the first time keeps your turn.'),
         _("If a card can't take effect (for example, refueling a full tank), it is simply discarded and the turn passes on.")
-      ].join("\n\n"))
-    end
-
-    def show_text(header, text)
-      field = EditBox.new(header, type: EditBox::Flags::MultiLine | EditBox::Flags::ReadOnly, text: text.to_s, quiet: false)
-      loop do
-        loop_update
-        field.update
-        break if key_pressed?(:key_escape) || key_pressed?(:key_enter)
-      end
+      ].join("\n\n"), header: _('Rules'))
     end
   end
 end

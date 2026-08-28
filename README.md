@@ -46,5 +46,5 @@ ruby test/mile_by_mile_test.rb
   signalling protocol is being redesigned).
 - Multiplayer: bot signalling first, then real players — will build on
   `Program#signal`/`#signaled` from elten3, once the protocol is ready.
-- Sounds are in `elten_app/audio/` (see that README for the naming scheme
+- Sounds are in `elten_app/Audio/` (see that README for the naming scheme
   and a note on how Elten resolves sound asset names).

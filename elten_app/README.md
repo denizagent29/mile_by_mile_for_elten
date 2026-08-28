@@ -20,7 +20,7 @@ fuzz_bot_vs_bot.rb                — runs N bot-vs-bot games outside Elten
                                      (catches crashes in bot logic against the real engine)
 harness_ui_smoke.rb               — runs the full MileByMileElten::UI class outside
                                      Elten via stubs for _/selector/alert/EditBox
-audio/                            — sound assets (flat, see naming note below)
+Audio/                            — sound assets (flat, see naming note below)
 locale/                           — ru/pl gettext catalogs (po + compiled mo)
 ```
 
@@ -83,7 +83,7 @@ only, extension stripped (`add_sound_asset` always does
 (`collect_physical_sound_assets`) scans the `Audio/` folder WITHOUT
 recursing into subfolders (`Dir.children`, not `Dir.glob("**/*")`). So
 all the files you sent (`cars/fail/tire.ogg`, `horses/success/tire.ogg`,
-etc.) got flattened into `elten_app/audio/` with unique names like
+etc.) got flattened into `elten_app/Audio/` with unique names like
 `cars_fail_tire.ogg`, `horses_success_tire.ogg`, `prot_tire.ogg`, to
 avoid a basename collision (`tire` existed in 5 different subfolders).
 If your packaging tool works differently (e.g. keeps the relative path
@@ -106,6 +106,18 @@ Naming scheme: `<variant>_<0|25|50|75|100|200>`, `<variant>_bibip`,
   line: what the bot did + what you just drew + "Your turn" — e.g.
   `Bot moved 50 miles. You drew 100 miles. Your turn.` (translated into
   ru/pl).
+
+## What's new in this round
+
+- Rules screen now uses Elten's `display_text` (a ReadOnly MultiLine
+  EditBox dialog) instead of a hand-rolled `show_text` that did not exist
+  in the Elten 3 API — opening Rules used to raise NoMethodError on a real
+  runtime. The harness now exercises that path (regression check).
+- Sound assets moved from `audio/` to `Audio/`: both
+  `build-eltenapp.rb` (packages only `Audio/**` as sound records) and
+  `collect_physical_sound_assets` (scans the `Audio` folder at runtime)
+  match on the capital name, so the lowercase folder meant zero sounds in
+  a packaged app on case-sensitive platforms.
 
 ## Next
 

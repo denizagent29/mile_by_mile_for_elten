@@ -26,6 +26,11 @@ end
 def key_pressed?(_key) = true
 def loop_update; end
 
+DISPLAYED_TEXT = []
+def display_text(text, header: '', **_kw)
+  DISPLAYED_TEXT << [header, text]
+end
+
 class EditBox
   module Flags
     MultiLine = 1
@@ -63,6 +68,21 @@ GAMES.times do |i|
   end
 end
 
+# the Rules screen must render via Elten's display_text (regression: a
+# hand-rolled show_text used to NoMethodError against the real Elten API)
+help_crashes = 0
+begin
+  DISPLAYED_TEXT.clear
+  ui = MileByMileElten::UI.new(FakeProgram.new)
+  ui.send(:show_help)
+  help_crashes = DISPLAYED_TEXT.empty? ? 1 : 0
+rescue StandardError => e
+  help_crashes += 1
+  puts "HELP CRASHED: #{e.class}: #{e.message}"
+  puts e.backtrace.first(6)
+end
+
 puts "Done: #{GAMES} games via the UI (human always plays the first card in hand), crashes: #{crashes}"
+puts "Rules screen rendered via display_text: #{help_crashes.zero? ? 'yes' : 'NO'}"
 puts "Sample final alert: #{ALERTS.last.inspect}" if ALERTS.any?
-exit(crashes.zero? ? 0 : 1)
+exit(crashes.zero? && help_crashes.zero? ? 0 : 1)
