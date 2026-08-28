@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "zstandard",
+# ]
+# ///
 # Builds the MileByMile .eltenapp from elten_app/ and installs it into
 # Elten's apps/src folder (Windows %APPDATA%). Pure-Python port of the
 # .eltenapp container format used by elten3/tools/build-eltenapp.rb, so the
