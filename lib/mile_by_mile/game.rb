@@ -7,14 +7,27 @@ module MileByMile
 
     attr_reader :players, :deck, :discard_pile, :distance_target, :current_index
 
-    def initialize(players, distance_target: 1000, include_remove_all_safeties: false, deck_class: Deck)
+    def initialize(players, distance_target: 1000, include_remove_all_safeties: false, deck_class: Deck, deck_mode: :shared, deck_copies: 1)
       raise ArgumentError, 'need at least 2 players' if players.size < 2
+      raise ArgumentError, "unknown deck_mode: #{deck_mode}" unless %i[shared separate].include?(deck_mode)
+      deck_copies = deck_copies.to_i
+      raise ArgumentError, 'deck_copies must be at least 1' if deck_copies < 1
 
       @players = players
       @distance_target = distance_target
-      @deck = deck_class.new(include_remove_all_safeties: include_remove_all_safeties).shuffle!
+      @deck_mode = deck_mode
       @discard_pile = []
-      @deck.deal(@players, 6)
+      if deck_mode == :separate
+        # своя колода у каждого игрока: раздача и добор идут из своей колоды
+        @deck = nil
+        players.each do |player|
+          player.deck = deck_class.new(include_remove_all_safeties: include_remove_all_safeties).shuffle!
+          6.times { player.hand << player.deck.draw }
+        end
+      else
+        @deck = deck_class.new(include_remove_all_safeties: include_remove_all_safeties, copies: deck_copies).shuffle!
+        @deck.deal(@players, 6)
+      end
       @current_index = rand(@players.size)
     end
 
@@ -27,11 +40,17 @@ module MileByMile
     end
 
     def finished?
-      !winner.nil? || deck.empty?
+      return !winner.nil? || @deck.empty? if @deck_mode == :shared
+
+      # раздельные колоды: игра заканчивается, когда игроку нечего брать
+      # и нечего ходить — иначе партия зависает на пустой руке
+      !winner.nil? || players.any? { |p| p.deck.empty? && p.hand.empty? }
     end
 
     # card   — карта из руки текущего игрока
     # target — игрок-цель, обязателен для HazardCard и RemoveAllSafetiesCard
+    # Возвращает :played (сыграна, ход уходит), :kept_turn (сыграна, ход
+    # остаётся — первая защита) или :wasted (уходит в отбой как неприменимая).
     def play(card, target: nil)
       raise RuleViolation, 'the game is over' if finished?
 
@@ -56,21 +75,24 @@ module MileByMile
     # уходит в отбой, ход передаётся следующему (использовано впустую)
     def discard_wasted(player, card)
       player.discard(card, discard_pile)
-      player.draw(deck)
+      player.draw(draw_deck_for(player))
       advance_turn!
+      :wasted
     end
 
     # успешно сыграна: в отбой, добор карты, ход следующему
     def discard_played(player, card)
       player.discard(card, discard_pile)
-      player.draw(deck)
+      player.draw(draw_deck_for(player))
       advance_turn!
+      :played
     end
 
     # успешная первая защита: в отбой, добор карты, ход СОХРАНЯЕТСЯ
     def discard_keep_turn(player, card)
       player.discard(card, discard_pile)
-      player.draw(deck)
+      player.draw(draw_deck_for(player))
+      :kept_turn
     end
 
     def play_distance(player, card)
@@ -155,6 +177,10 @@ module MileByMile
 
       target.car.clear_safeties!
       discard_played(player, card)
+    end
+
+    def draw_deck_for(player)
+      @deck_mode == :separate ? player.deck : @deck
     end
 
     def advance_turn!

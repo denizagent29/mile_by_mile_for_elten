@@ -6,8 +6,11 @@ module MileByMile
     HAZARD_TYPES = %i[stall empty_tank flat_tire accident turned_back speed_limit].freeze
     REMEDY_TYPES = %i[refuel repair_tire repair turn_forward remove_speed_limit].freeze
 
-    def initialize(include_remove_all_safeties: false)
+    def initialize(include_remove_all_safeties: false, copies: 1)
+      copies = copies.to_i
+      copies = 1 if copies < 1
       @cards = build(include_remove_all_safeties)
+      @cards = Array.new(copies) { build(include_remove_all_safeties) }.flatten if copies > 1
     end
 
     def shuffle!

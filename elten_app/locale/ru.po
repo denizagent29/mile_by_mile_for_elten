@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: MileByMile 1.0\n"
+"Project-Id-Version: MileByMile 1.1\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -18,8 +18,41 @@ msgstr "Правила"
 msgid "Exit"
 msgstr "Выход"
 
-msgid "Choose a card set"
-msgstr "Выберите набор карт"
+msgid "Settings"
+msgstr "Настройки"
+
+msgid "Card set"
+msgstr "Набор карт"
+
+msgid "Distance"
+msgstr "Дистанция"
+
+msgid "Number of decks"
+msgstr "Количество колод"
+
+msgid "Each player has their own deck"
+msgstr "У каждого своя колода"
+
+msgid "1 common deck"
+msgstr "1 общая колода"
+
+msgid "2 common decks"
+msgstr "2 общие колоды"
+
+msgid "3 common decks"
+msgstr "3 общие колоды"
+
+msgid "4 common decks"
+msgstr "4 общие колоды"
+
+msgid "5 common decks"
+msgstr "5 общих колод"
+
+msgid "OK"
+msgstr "ОК"
+
+msgid "Cancel"
+msgstr "Отмена"
 
 msgid "Cars"
 msgstr "Машины"
@@ -27,14 +60,17 @@ msgstr "Машины"
 msgid "Horses"
 msgstr "Лошади"
 
-msgid "Choose the distance"
-msgstr "Выберите дистанцию"
-
 msgid "%{d} miles"
 msgstr "%{d} миль"
 
-msgid "The game has started. Distance: %{d} miles."
-msgstr "Игра началась. Дистанция: %{d} миль."
+msgid "Let's go!"
+msgstr "Поехали!"
+
+msgid "By fate's will, you move first."
+msgstr "По воле судьбы первым ходите вы."
+
+msgid "By fate's will, the bot moves first."
+msgstr "По воле судьбы первым ходит бот."
 
 msgid "Your turn"
 msgstr "Ваш ход"
@@ -42,41 +78,200 @@ msgstr "Ваш ход"
 msgid "Your turn."
 msgstr "Ваш ход."
 
+msgid "The bot moves."
+msgstr "Ходит бот."
+
 msgid "You"
 msgstr "Вы"
 
 msgid "Bot"
 msgstr "Бот"
 
-msgid "running"
-msgstr "на ходу"
-
-msgid "not started"
-msgstr "не заведена"
-
-msgid "turned around"
-msgstr "развёрнута"
-
-msgid "speed limited"
-msgstr "ограничение скорости"
-
-msgid "%{player} moved %{miles} miles."
-msgstr "%{player} проехал %{miles} миль."
-
-msgid "%{player} played: %{card}."
-msgstr "%{player} сыграл: %{card}."
-
 msgid "You drew %{card}."
 msgstr "Вы взяли %{card}."
 
-msgid "You won! The distance is covered."
-msgstr "Вы выиграли! Дистанция пройдена."
+msgid "The bot drew %{card}."
+msgstr "Бот взял %{card}."
 
-msgid "The bot won. Better luck next time."
-msgstr "Бот выиграл. Повезёт в следующий раз."
+msgid "You started your car."
+msgstr "Вы завели свою машину."
+
+msgid "The bot started its engine."
+msgstr "Бот завёл мотор."
+
+msgid "You refueled."
+msgstr "Вы налили бензин."
+
+msgid "The bot refueled."
+msgstr "Бот налил бензин."
+
+msgid "You fixed the tire."
+msgstr "Вы накачали колесо."
+
+msgid "The bot fixed the tire."
+msgstr "Бот накачал колесо."
+
+msgid "You repaired your car."
+msgstr "Вы починили машину."
+
+msgid "The bot repaired its car."
+msgstr "Бот починил машину."
+
+msgid "You turned forward."
+msgstr "Вы развернулись вперёд."
+
+msgid "The bot turned forward."
+msgstr "Бот развернулся вперёд."
+
+msgid "You removed the speed limit."
+msgstr "Вы убрали ограничение скорости."
+
+msgid "The bot removed the speed limit."
+msgstr "Бот убрал ограничение скорости."
+
+msgid "You protected yourself from %{hazard}."
+msgstr "Вы защитились от %{hazard}."
+
+msgid "The bot protected itself from %{hazard}."
+msgstr "Бот защитился от %{hazard}."
+
+msgid "engine stalling"
+msgstr "глушения мотора"
+
+msgid "fuel draining"
+msgstr "слива бензина"
+
+msgid "a flat tire"
+msgstr "прокола колёс"
+
+msgid "an accident"
+msgstr "аварии"
+
+msgid "being turned around"
+msgstr "разворота"
+
+msgid "the speed limit"
+msgstr "ограничения скорости"
+
+msgid "skipping a turn"
+msgstr "пропуска хода"
+
+msgid "You drove %{miles}."
+msgstr "Вы проехали %{miles}."
+
+msgid "The bot drove %{miles}."
+msgstr "Бот проехал %{miles}."
+
+msgid "You drove back %{miles}."
+msgstr "Вы проехали обратно %{miles}."
+
+msgid "The bot drove back %{miles}."
+msgstr "Бот проехал обратно %{miles}."
+
+msgid "You discarded %{card}."
+msgstr "Вы сбросили %{card}."
+
+msgid "The bot discarded %{card}."
+msgstr "Бот сбросил %{card}."
+
+msgid "You stalled the bot's engine."
+msgstr "Вы заглушили мотор боту."
+
+msgid "The bot stalled your engine."
+msgstr "Бот заглушил мотор вам."
+
+msgid "You drained the bot's tank."
+msgstr "Вы слили бензин боту."
+
+msgid "The bot drained your tank."
+msgstr "Бот слил бензин вам."
+
+msgid "You gave the bot a flat tire."
+msgstr "Вы прокололи колесо боту."
+
+msgid "The bot gave you a flat tire."
+msgstr "Бот проколол колесо вам."
+
+msgid "You crashed the bot."
+msgstr "Вы устроили аварию боту."
+
+msgid "The bot crashed you."
+msgstr "Бот устроил аварию вам."
+
+msgid "You turned the bot around."
+msgstr "Вы развернули бота назад."
+
+msgid "The bot turned you around."
+msgstr "Бот развернул вас назад."
+
+msgid "You limited the bot's speed."
+msgstr "Вы ограничили скорость боту."
+
+msgid "The bot limited your speed."
+msgstr "Бот ограничил скорость вам."
+
+msgid "You made the bot skip a turn."
+msgstr "Вы заставили бота пропустить ход."
+
+msgid "The bot made you skip a turn."
+msgstr "Бот заставил вас пропустить ход."
+
+msgid "You stripped the bot's protections."
+msgstr "Вы сняли все защиты с бота."
+
+msgid "The bot stripped your protections."
+msgstr "Бот снял все защиты с вас."
+
+msgid "You are at the finish line. Congratulations!"
+msgstr "Вы на финише. Поздравляем!"
+
+msgid "The bot is at the finish line."
+msgstr "Бот на финише."
 
 msgid "The deck ran out. Draw."
 msgstr "Колода закончилась. Ничья."
+
+msgid "%{d} miles. You can move."
+msgstr "%{d} миль. Можно ехать."
+
+msgid "%{d} miles. You cannot move: %{reasons}."
+msgstr "%{d} миль. Ехать нельзя: %{reasons}."
+
+msgid "You can move."
+msgstr "Можно ехать."
+
+msgid "Engine stalled"
+msgstr "Мотор заглушен"
+
+msgid "Fuel drained"
+msgstr "Бензин слит"
+
+msgid "Tire flat"
+msgstr "Колесо проколото"
+
+msgid "In an accident"
+msgstr "В аварии"
+
+msgid "Speed limited"
+msgstr "Скорость ограничена"
+
+msgid "Turned back"
+msgstr "Направление назад"
+
+msgid "The bot is thinking..."
+msgstr "Бот думает..."
+
+msgid "End the game?"
+msgstr "Закончить игру?"
+
+msgid "No moves yet."
+msgstr "Ходов ещё не было."
+
+msgid "No game in progress."
+msgstr "Игра ещё не началась."
+
+msgid "Cannot display the status."
+msgstr "Не могу показать статус."
 
 msgid "The goal is to be the first to cover the target distance exactly, without overshooting."
 msgstr "Цель — первым проехать заданное расстояние ровно, без превышения."
@@ -95,6 +290,9 @@ msgstr "Карты защиты ставятся на себя один раз �
 
 msgid "If a card can't take effect (for example, refueling a full tank), it is simply discarded and the turn passes on."
 msgstr "Если карта не может подействовать (например, вы наливаете бензин в полный бак), она просто уходит в отбой и ход передаётся дальше."
+
+msgid "During the game: F2 — the last move, F3 — your distance and whether you can move. Escape — end the game."
+msgstr "Во время игры: F2 — последний ход, F3 — ваша дистанция и можно ли ехать. Escape — закончить игру."
 
 msgid "25 miles"
 msgstr "25 миль"
@@ -209,4 +407,3 @@ msgstr "Защита от потери подковы"
 
 msgid "Exhaustion immunity"
 msgstr "Защита от усталости"
-

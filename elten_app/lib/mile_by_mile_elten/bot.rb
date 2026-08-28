@@ -34,6 +34,16 @@ module MileByMileElten
       safe_fallback(hand, opponents)
     end
 
+    # Сколько секунд «думает» перед ходом. Простой выбор — рандом 2-4 секунды,
+    # сложный (много карт движения/защит в руке) — до ~5.5 секунд.
+    def think_duration
+      base = 2.0 + rand * 2.0
+      hand = @player.hand
+      complex = hand.count { |c| c.is_a?(DistanceCard) } >= 2 ||
+                hand.count { |c| c.is_a?(SafetyCard) || c.is_a?(RemedyCard) } >= 2
+      complex ? base + rand * 1.5 : base
+    end
+
     private
 
     def pick_self_remedy(hand, car)

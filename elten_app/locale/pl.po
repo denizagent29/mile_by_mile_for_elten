@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: MileByMile 1.0\n"
+"Project-Id-Version: MileByMile 1.1\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -18,8 +18,41 @@ msgstr "Zasady"
 msgid "Exit"
 msgstr "Wyjście"
 
-msgid "Choose a card set"
-msgstr "Wybierz zestaw kart"
+msgid "Settings"
+msgstr "Ustawienia"
+
+msgid "Card set"
+msgstr "Zestaw kart"
+
+msgid "Distance"
+msgstr "Dystans"
+
+msgid "Number of decks"
+msgstr "Liczba talii"
+
+msgid "Each player has their own deck"
+msgstr "Każdy gracz ma własną talię"
+
+msgid "1 common deck"
+msgstr "1 wspólna talia"
+
+msgid "2 common decks"
+msgstr "2 wspólne talie"
+
+msgid "3 common decks"
+msgstr "3 wspólne talie"
+
+msgid "4 common decks"
+msgstr "4 wspólne talie"
+
+msgid "5 common decks"
+msgstr "5 wspólnych talii"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Cancel"
+msgstr "Anuluj"
 
 msgid "Cars"
 msgstr "Samochody"
@@ -27,14 +60,17 @@ msgstr "Samochody"
 msgid "Horses"
 msgstr "Konie"
 
-msgid "Choose the distance"
-msgstr "Wybierz dystans"
-
 msgid "%{d} miles"
 msgstr "%{d} mil"
 
-msgid "The game has started. Distance: %{d} miles."
-msgstr "Gra się rozpoczęła. Dystans: %{d} mil."
+msgid "Let's go!"
+msgstr "Jedziemy!"
+
+msgid "By fate's will, you move first."
+msgstr "Z woli losu to ty ruszasz pierwszy."
+
+msgid "By fate's will, the bot moves first."
+msgstr "Z woli losu pierwszy rusza bot."
 
 msgid "Your turn"
 msgstr "Twoja kolej"
@@ -42,41 +78,200 @@ msgstr "Twoja kolej"
 msgid "Your turn."
 msgstr "Twoja kolej."
 
+msgid "The bot moves."
+msgstr "Ruch bota."
+
 msgid "You"
 msgstr "Ty"
 
 msgid "Bot"
 msgstr "Bot"
 
-msgid "running"
-msgstr "na chodzie"
-
-msgid "not started"
-msgstr "niezapalony silnik"
-
-msgid "turned around"
-msgstr "zawrócony"
-
-msgid "speed limited"
-msgstr "ograniczenie prędkości"
-
-msgid "%{player} moved %{miles} miles."
-msgstr "%{player} przejechał %{miles} mil."
-
-msgid "%{player} played: %{card}."
-msgstr "%{player} zagrał: %{card}."
-
 msgid "You drew %{card}."
 msgstr "Dobrałeś: %{card}."
 
-msgid "You won! The distance is covered."
-msgstr "Wygrałeś! Dystans pokonany."
+msgid "The bot drew %{card}."
+msgstr "Bot dobrał: %{card}."
 
-msgid "The bot won. Better luck next time."
-msgstr "Bot wygrał. Powodzenia następnym razem."
+msgid "You started your car."
+msgstr "Uruchomiłeś silnik."
+
+msgid "The bot started its engine."
+msgstr "Bot uruchomił silnik."
+
+msgid "You refueled."
+msgstr "Zatankowałeś."
+
+msgid "The bot refueled."
+msgstr "Bot zatankował."
+
+msgid "You fixed the tire."
+msgstr "Naprawiłeś oponę."
+
+msgid "The bot fixed the tire."
+msgstr "Bot naprawił oponę."
+
+msgid "You repaired your car."
+msgstr "Naprawiłeś samochód."
+
+msgid "The bot repaired its car."
+msgstr "Bot naprawił samochód."
+
+msgid "You turned forward."
+msgstr "Zawróciłeś do przodu."
+
+msgid "The bot turned forward."
+msgstr "Bot zawrócił do przodu."
+
+msgid "You removed the speed limit."
+msgstr "Zdjąłeś ograniczenie prędkości."
+
+msgid "The bot removed the speed limit."
+msgstr "Bot zdjął ograniczenie prędkości."
+
+msgid "You protected yourself from %{hazard}."
+msgstr "Ochroniłeś się przed %{hazard}."
+
+msgid "The bot protected itself from %{hazard}."
+msgstr "Bot ochronił się przed %{hazard}."
+
+msgid "engine stalling"
+msgstr "zgaśnięciem silnika"
+
+msgid "fuel draining"
+msgstr "opróżnieniem baku"
+
+msgid "a flat tire"
+msgstr "przebiciem opony"
+
+msgid "an accident"
+msgstr "wypadkiem"
+
+msgid "being turned around"
+msgstr "zawróceniem"
+
+msgid "the speed limit"
+msgstr "ograniczeniem prędkości"
+
+msgid "skipping a turn"
+msgstr "pominięciem kolejki"
+
+msgid "You drove %{miles}."
+msgstr "Przejechałeś %{miles}."
+
+msgid "The bot drove %{miles}."
+msgstr "Bot przejechał %{miles}."
+
+msgid "You drove back %{miles}."
+msgstr "Przejechałeś do tyłu %{miles}."
+
+msgid "The bot drove back %{miles}."
+msgstr "Bot przejechał do tyłu %{miles}."
+
+msgid "You discarded %{card}."
+msgstr "Odrzuciłeś %{card}."
+
+msgid "The bot discarded %{card}."
+msgstr "Bot odrzucił %{card}."
+
+msgid "You stalled the bot's engine."
+msgstr "Zgasiłeś silnik botowi."
+
+msgid "The bot stalled your engine."
+msgstr "Bot zgasił ci silnik."
+
+msgid "You drained the bot's tank."
+msgstr "Opróżniłeś bak botowi."
+
+msgid "The bot drained your tank."
+msgstr "Bot opróżnił ci bak."
+
+msgid "You gave the bot a flat tire."
+msgstr "Przebiłeś oponę botowi."
+
+msgid "The bot gave you a flat tire."
+msgstr "Bot przebił ci oponę."
+
+msgid "You crashed the bot."
+msgstr "Spowodowałeś wypadek bota."
+
+msgid "The bot crashed you."
+msgstr "Bot spowodował ci wypadek."
+
+msgid "You turned the bot around."
+msgstr "Zawróciłeś bota do tyłu."
+
+msgid "The bot turned you around."
+msgstr "Bot zawrócił cię do tyłu."
+
+msgid "You limited the bot's speed."
+msgstr "Ograniczyłeś prędkość botowi."
+
+msgid "The bot limited your speed."
+msgstr "Bot ograniczył ci prędkość."
+
+msgid "You made the bot skip a turn."
+msgstr "Sprawiłeś, że bot pominął kolejkę."
+
+msgid "The bot made you skip a turn."
+msgstr "Bot sprawił, że pominąłeś kolejkę."
+
+msgid "You stripped the bot's protections."
+msgstr "Zdjąłeś wszystkie ochrony z bota."
+
+msgid "The bot stripped your protections."
+msgstr "Bot zdjął z ciebie wszystkie ochrony."
+
+msgid "You are at the finish line. Congratulations!"
+msgstr "Jesteś na mecie. Gratulacje!"
+
+msgid "The bot is at the finish line."
+msgstr "Bot jest na mecie."
 
 msgid "The deck ran out. Draw."
 msgstr "Talia się skończyła. Remis."
+
+msgid "%{d} miles. You can move."
+msgstr "%{d} mil. Możesz jechać."
+
+msgid "%{d} miles. You cannot move: %{reasons}."
+msgstr "%{d} mil. Nie możesz jechać: %{reasons}."
+
+msgid "You can move."
+msgstr "Możesz jechać."
+
+msgid "Engine stalled"
+msgstr "Silnik zgaszony"
+
+msgid "Fuel drained"
+msgstr "Benzyna wylana"
+
+msgid "Tire flat"
+msgstr "Opona przebita"
+
+msgid "In an accident"
+msgstr "W wypadku"
+
+msgid "Speed limited"
+msgstr "Prędkość ograniczona"
+
+msgid "Turned back"
+msgstr "Skierowany do tyłu"
+
+msgid "The bot is thinking..."
+msgstr "Bot myśli..."
+
+msgid "End the game?"
+msgstr "Zakończyć grę?"
+
+msgid "No moves yet."
+msgstr "Brak ruchów."
+
+msgid "No game in progress."
+msgstr "Gra się jeszcze nie rozpoczęła."
+
+msgid "Cannot display the status."
+msgstr "Nie mogę pokazać statusu."
 
 msgid "The goal is to be the first to cover the target distance exactly, without overshooting."
 msgstr "Celem jest jako pierwszy pokonać zadany dystans dokładnie, bez przekroczenia."
@@ -95,6 +290,9 @@ msgstr "Karty ochronne wykłada się na siebie raz i na stałe blokują jeden ro
 
 msgid "If a card can't take effect (for example, refueling a full tank), it is simply discarded and the turn passes on."
 msgstr "Jeśli karta nie może zadziałać (na przykład tankujesz pełny bak), po prostu trafia na stos odrzuconych, a kolejka przechodzi dalej."
+
+msgid "During the game: F2 — the last move, F3 — your distance and whether you can move. Escape — end the game."
+msgstr "Podczas gry: F2 — ostatni ruch, F3 — twój dystans i czy możesz jechać. Escape — zakończ grę."
 
 msgid "25 miles"
 msgstr "25 mil"
@@ -209,4 +407,3 @@ msgstr "Odporność na utratę podkowy"
 
 msgid "Exhaustion immunity"
 msgstr "Odporność na wyczerpanie"
-

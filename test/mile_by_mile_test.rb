@@ -111,6 +111,50 @@ class MileByMileTest < Minitest::Test
     assert_includes names, 'Hunger immunity'
   end
 
+  def test_separate_decks_each_player_has_own
+    a = Player.new('A')
+    b = Player.new('B')
+    game = Game.new([a, b], distance_target: 1000, deck_mode: :separate)
+    refute_nil a.deck
+    refute_nil b.deck
+    refute_same a.deck, b.deck
+    assert_equal 6, a.hand.size
+    assert_equal 6, b.hand.size
+    # каждая колода полного состава и не пуста после раздачи
+    assert_equal Deck.new.size - 6, a.deck.size
+    assert_equal Deck.new.size - 6, b.deck.size
+  end
+
+  def test_separate_decks_draw_from_own_deck
+    a = Player.new('A')
+    b = Player.new('B')
+    game = Game.new([a, b], distance_target: 1000, deck_mode: :separate)
+    before_a = a.deck.size
+    before_b = b.deck.size
+
+    start = RemedyCard.new(:start)
+    a.hand << start
+    game.instance_variable_set(:@current_index, 0)
+    game.play(start) # успешно сыграна, ход переходит B
+
+    # A добрал из СВОЕЙ колоды
+    assert_equal before_a - 1, a.deck.size
+    assert_equal before_b, b.deck.size
+  end
+
+  def test_separate_decks_play_out_hand_then_finish
+    a = Player.new('A')
+    b = Player.new('B')
+    game = Game.new([a, b], distance_target: 10_000, deck_mode: :separate)
+    # колоды пусты, но в руках ещё карты — игроки доигрывают руку
+    a.deck.instance_variable_set(:@cards, [])
+    b.deck.instance_variable_set(:@cards, [])
+    refute game.finished?
+    # как только игроку нечего брать и нечего ходить — партия окончена
+    a.hand.clear
+    assert game.finished?
+  end
+
   def test_team_shares_car
     team = Team.new('Джаз-бэнд', %w[Deniz Ludub])
     assert_same team.players[0].car, team.players[1].car

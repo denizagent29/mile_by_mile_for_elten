@@ -4,7 +4,7 @@ module MileByMile
   # Игрок: имя, рука карт, машина (своя или общая с командой).
   class Player
     attr_reader :name, :hand
-    attr_accessor :car
+    attr_accessor :car, :deck
 
     def initialize(name, car: Car.new)
       @name = name
