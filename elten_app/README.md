@@ -149,7 +149,10 @@ Naming scheme: `<variant>_<0|25|50|75|100|200>`, `<variant>_bibip`,
 
 ## Next
 
-- Real multiplayer on top of `Program#signal`/`#signaled` — once Pieper
-  ships the new signalling protocol.
+- Real multiplayer — done on `EltenAPI::Communication` (Elten 3.0.2 RC 1):
+  `create_session` + `session.invite` (host), `on_invitation` + `accept`
+  (guest), `send_reliable` for moves, `close`/`leave` for exit. Settings
+  travel in `session_metadata`; deck seed in the `start` packet keeps both
+  engines identical.
 - Online leaderboard via `server_table` (like AudioMemory) — not wired
   up yet.

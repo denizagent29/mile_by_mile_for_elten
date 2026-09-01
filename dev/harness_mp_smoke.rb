@@ -6,10 +6,21 @@
 # Verifies: handshake order, that both engines finish in sync, and that the
 # winners agree.
 
+require 'json'
 require_relative '../lib/mile_by_mile'
 require_relative '../elten_app/lib/mile_by_mile_elten/bot'
 require_relative '../elten_app/lib/mile_by_mile_elten/audio'
 require_relative '../elten_app/lib/mile_by_mile_elten/ui'
+
+def parse_type?(data)
+  JSON.parse(data.to_s.dup.force_encoding(Encoding::UTF_8))['type']
+rescue JSON::ParserError, TypeError
+  nil
+end
+
+def parse_move?(data)
+  parse_type?(data) == 'move'
+end
 
 # --- minimal Elten API stubs ---
 def _(s) = s.to_s
@@ -235,41 +246,286 @@ class EditBox
   def update; end
 end
 
-# --- transport: routes signals between two UI instances ---
-class Transport
+# --- in-memory EltenAPI::Communication transport ---
+# Two fake endpoints (host/guest) exchange invitations and reliable messages
+# through a shared registry. Each side gets its own Session handle; sending
+# routes the payload to the peer's handle, which emits on its callbacks (and
+# buffers until a callback is registered — mirrors the server-side queue).
+
+class FakeParticipant
+  attr_reader :user
+
+  def initialize(user)
+    @user = user
+  end
+end
+
+class FakeMessage
+  attr_reader :data
+
+  def initialize(data)
+    @data = data
+  end
+end
+
+class FakeOutgoingInvitation
+  attr_reader :status
+
   def initialize
-    @peers = {}
-    @mutex = Mutex.new
+    @status = :pending
   end
 
-  def register(nick, ui)
-    @peers[nick] = ui
+  def accepted!
+    @status = :accepted
   end
 
-  def signal(from, to, packet)
-    @mutex.synchronize do
-      peer = @peers[to]
-      peer&.handle_signal(from, packet)
+  def rejected!
+    @status = :rejected
+  end
+
+  def cancelled!
+    @status = :cancelled
+  end
+end
+
+class FakeSession
+  attr_reader :id, :metadata, :my_nick, :sent, :received
+
+  def initialize(id, metadata:, my_nick:, transport:)
+    @id = id
+    @metadata = metadata
+    @my_nick = my_nick
+    @transport = transport
+    @callbacks = Hash.new { |h, k| h[k] = [] }
+    @pending = []
+    @sent = []
+    @received = []
+  end
+
+  def on_reliable(&block)
+    @callbacks[:reliable] << block
+    flush_pending(:reliable)
+    self
+  end
+
+  def on_participant_left(&block)
+    @callbacks[:participant_left] << block
+    self
+  end
+
+  def on_closed(&block)
+    @callbacks[:closed] << block
+    self
+  end
+
+  def participants
+    @transport.session_participants(self)
+  end
+
+  def invite(user)
+    @transport.invite(@my_nick, user, self)
+  end
+
+  def send_reliable(data)
+    @sent << data
+    @transport.send_reliable(self, data)
+    self
+  end
+
+  def close
+    @transport.close_session(self)
+  end
+
+  def leave
+    @transport.leave_session(self)
+  end
+
+  def deliver_reliable(data)
+    @received << data
+    if @callbacks[:reliable].any?
+      @callbacks[:reliable].each { |b| b.call(FakeMessage.new(data)) }
+    else
+      @pending << [:reliable, data]
+    end
+  end
+
+  def deliver_closed(reason)
+    @callbacks[:closed].each { |b| b.call(reason) }
+  end
+
+  def deliver_participant_left(participant, reason)
+    @callbacks[:participant_left].each { |b| b.call(participant, reason) }
+  end
+
+  private
+
+  def flush_pending(kind)
+    @pending.delete_if do |k, data|
+      next false unless k == kind
+
+      @callbacks[kind].each { |b| b.call(FakeMessage.new(data)) }
+      true
+    end
+  end
+end
+
+class FakeInvitation
+  attr_reader :sender, :session_metadata, :status, :guest_nick
+
+  def initialize(host_nick, guest_session, endpoint)
+    @sender = FakeParticipant.new(host_nick)
+    @session_metadata = guest_session.metadata
+    @endpoint = endpoint
+    @guest_nick = guest_session.my_nick
+    @status = :pending
+  end
+
+  def accept(metadata: {})
+    @status = :accepted
+    @endpoint.accept_invitation(self)
+  end
+
+  def reject
+    @status = :rejected
+    @endpoint.reject_invitation(self)
+    true
+  end
+end
+
+class FakeEndpoint
+  attr_reader :session
+
+  def initialize(nick, transport)
+    @nick = nick
+    @transport = transport
+    @invitation_callbacks = []
+    @pending_invitations = []
+    @session = nil
+  end
+
+  def on_invitation(&block)
+    @invitation_callbacks << block
+    pending = @pending_invitations
+    @pending_invitations = []
+    pending.each { |inv| block.call(inv) }
+    self
+  end
+
+  def create_session(metadata: {}, capacity: 2, **_kw)
+    @session = @transport.create_session(@nick, metadata)
+  end
+
+  def accept_invitation(invitation)
+    @session = @transport.accept(invitation)
+  end
+
+  def reject_invitation(invitation)
+    @transport.reject(invitation)
+  end
+
+  def deliver_invitation(invitation)
+    if @invitation_callbacks.any?
+      @invitation_callbacks.each { |b| b.call(invitation) }
+    else
+      @pending_invitations << invitation
     end
   end
 end
 
 class FakeProgram
-  attr_reader :sent
+  attr_reader :nick, :communication
 
   def initialize(nick, transport)
     @nick = nick
-    @transport = transport
-    @sent = []
-  end
-
-  def signal(user, packet)
-    @sent << [user, packet]
-    @transport.signal(@nick, user, packet)
+    @communication = FakeEndpoint.new(nick, transport)
   end
 
   def play_app_sound(name, **_kw)
     true
+  end
+end
+
+# Routes invitations/messages between two fake endpoints; keeps one session
+# record per game with separate host/guest handles.
+class Transport
+  def initialize
+    @peers = {}
+    @sessions = {}
+    @invitations = {}
+    @mutex = Mutex.new
+  end
+
+  def register(nick, endpoint)
+    @peers[nick] = endpoint
+  end
+
+  def create_session(host_nick, metadata)
+    @mutex.synchronize do
+      id = "s#{@sessions.size + 1}"
+      session = FakeSession.new(id, metadata: metadata, my_nick: host_nick, transport: self)
+      @sessions[id] = { host: session, guest: nil, members: [host_nick] }
+      session
+    end
+  end
+
+  def invite(host_nick, guest_nick, session)
+    @mutex.synchronize do
+      rec = @sessions[session.id]
+      guest_session = FakeSession.new(session.id, metadata: session.metadata,
+                                                   my_nick: guest_nick, transport: self)
+      rec[:guest] = guest_session
+      outgoing = FakeOutgoingInvitation.new
+      @invitations[[host_nick, guest_nick]] = outgoing
+      invitation = FakeInvitation.new(host_nick, guest_session, @peers[guest_nick])
+      @peers[guest_nick].deliver_invitation(invitation)
+      outgoing
+    end
+  end
+
+  def accept(invitation)
+    @mutex.synchronize do
+      outgoing = @invitations[[invitation.sender.user, invitation.guest_nick]]
+      outgoing&.accepted!
+      rec = @sessions.values.find { |r| r[:guest]&.my_nick == invitation.guest_nick }
+      rec[:members] << invitation.guest_nick unless rec[:members].include?(invitation.guest_nick)
+      rec[:guest]
+    end
+  end
+
+  def reject(invitation)
+    @mutex.synchronize { @invitations[[invitation.sender.user, invitation.guest_nick]]&.rejected! }
+  end
+
+  def session_participants(session)
+    @mutex.synchronize do
+      rec = @sessions[session.id]
+      rec[:members].map { |nick| FakeParticipant.new(nick) }
+    end
+  end
+
+  def send_reliable(session, data)
+    @mutex.synchronize do
+      rec = @sessions[session.id]
+      peer = session.my_nick == rec[:host].my_nick ? rec[:guest] : rec[:host]
+      peer.deliver_reliable(data)
+    end
+  end
+
+  def close_session(session)
+    @mutex.synchronize do
+      rec = @sessions[session.id]
+      rec[:host].deliver_closed(:closed)
+      rec[:guest]&.deliver_closed(:closed)
+    end
+  end
+
+  def leave_session(session)
+    @mutex.synchronize do
+      rec = @sessions[session.id]
+      peer = session.my_nick == rec[:host].my_nick ? rec[:guest] : rec[:host]
+      session.deliver_closed(:left)
+      peer&.deliver_participant_left(FakeParticipant.new(session.my_nick), :left)
+    end
   end
 end
 
@@ -278,6 +534,7 @@ GAMES = (ARGV[0] || 5).to_i
 errors = 0
 
 GAMES.times do |i|
+  Thread.abort_on_exception = true
   ALERTS.clear
   SPEECH.clear
   transport = Transport.new
@@ -286,8 +543,8 @@ GAMES.times do |i|
 
   host_ui = MileByMileElten::UI.new(host_prog)
   guest_ui = MileByMileElten::UI.new(guest_prog)
-  transport.register('Host', host_ui)
-  transport.register('Guest', guest_ui)
+  transport.register('Host', host_prog.communication)
+  transport.register('Guest', guest_prog.communication)
 
   $form_values_script = [[0, 1, 3]] # cars, 2000 miles, 3 common decks
   $input_text_result = 'Guest'
@@ -311,14 +568,22 @@ GAMES.times do |i|
 
   hg = host_ui.instance_variable_get(:@game)
   gg = guest_ui.instance_variable_get(:@game)
-  host_moves = host_prog.sent.count { |_u, p| p[:type] == 'move' }
-  guest_moves = guest_prog.sent.count { |_u, p| p[:type] == 'move' }
+  # сессия обнуляется в teardown — пакеты считаем через endpoint'ы
+  host_sent = host_prog.communication.session&.sent || []
+  guest_sent = guest_prog.communication.session&.sent || []
+  guest_received = guest_prog.communication.session&.received || []
+  host_moves = host_sent.count { |d| parse_move?(d) }
+  guest_moves = guest_sent.count { |d| parse_move?(d) }
+  host_start = host_sent.any? { |d| parse_type?(d) == 'start' }
+  guest_got_start = guest_received.any? { |d| parse_type?(d) == 'start' }
 
   ok = true
   ok = false unless host_result == :played
   ok = false unless guest_result == :played
   ok = false unless hg.finished? && gg.finished?
   ok = false unless host_moves + guest_moves > 0
+  ok = false unless host_start
+  ok = false unless guest_got_start
   # имена игроков на двух сторонах разные (каждый называет себя "You"),
   # поэтому сверяем ПОЗИЦИЮ победителя в массиве игроков — движки идентичны
   widx_h = hg.players.index(hg.winner)
@@ -328,13 +593,8 @@ GAMES.times do |i|
   puts "MP GAME ##{i}: host=#{host_result.inspect} guest=#{guest_result.inspect} " \
        "host_finished=#{hg.finished?} guest_finished=#{gg.finished?} " \
        "moves(host=#{host_moves},guest=#{guest_moves}) " \
+       "start(host=#{host_start},guest=#{guest_got_start}) " \
        "winner_slot(h=#{widx_h.inspect},g=#{widx_g.inspect}) sync=#{ok ? 'yes' : 'NO'}"
-
-  # handshake order check
-  types = host_prog.sent.map { |_u, p| p[:type] }.join(',')
-  ok = false unless types.include?('invite') && types.include?('start')
-  types_g = guest_prog.sent.map { |_u, p| p[:type] }.join(',')
-  ok = false unless types_g.include?('accept')
 
   errors += 1 unless ok
 end

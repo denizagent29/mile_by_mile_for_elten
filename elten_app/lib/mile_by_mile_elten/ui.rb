@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'json'
+
 module MileByMileElten
   class UI
     include MileByMile
@@ -146,8 +148,8 @@ module MileByMileElten
     def initialize(program)
       @program = program
       @audio = Audio.new(program)
-      # очередь входящих сигналов мультиплеера [user, packet]; сигналы кладёт
-      # ProgramMileByMile#signaled, а хендлеры разбирают её в своих Runner-циклах
+      # очередь входящих событий мультиплеера [kind, payload]; события кладут
+      # колбэки EltenAPI::Communication, а хендлеры разбирают их в Runner-циклах
       @inbox = []
       @multiplayer = false
     end
@@ -167,15 +169,6 @@ module MileByMileElten
         else break
         end
       end
-    end
-
-    # Входящий сигнал от ProgramMileByMile#signaled (вызывается из loop.rb
-    # на $scene). Публичный интерфейс с Program: кладём пакет в очередь,
-    # Runner того экрана, который ждёт нужный пакет, разберёт её в on_tick.
-    def handle_signal(user, packet)
-      return unless packet.is_a?(Hash)
-
-      @inbox << [user, packet.transform_keys { |k| k.to_s.to_sym }]
     end
 
     private
@@ -277,12 +270,65 @@ module MileByMileElten
 
     # --- мультиплеер ---
 
-    # Ожидание нужного сигнала в Runner: F2/F4 активны, Escape — отмена,
-    # timeout секунд — выход по таймауту. Блок получает [user, packet] и
-    # возвращает true, когда пакет «наш». Найденный пакет удаляется из
-    # очереди, чтобы не перехватывался повторно. Возвращает [user, packet],
-    # :timeout или :cancelled.
-    def wait_for_signals(timeout: 60, cancel_text: _('Cancel waiting?'))
+    # Лениво создаём endpoint Communication (app_id из манифеста). Колбэки
+    # Communication диспатчатся на главном потоке из главного цикла Elten
+    # (Communication.tick в loop.rb), поэтому @inbox трогается только из
+    # основного потока и мьютекс не нужен.
+    def communication_endpoint
+      @communication ||= @program.communication
+    end
+
+    # Регистрируем приём приглашений один раз: колбэк кладёт Invitation в
+    # @inbox, а «Ждать приглашение» забирает его оттуда в своём цикле.
+    def register_invitation_listener
+      return if @invitation_listener
+
+      @invitation_listener = true
+      communication_endpoint.on_invitation do |invitation|
+        @inbox << [:invitation, invitation]
+      end
+    end
+
+    # Подписка сессии на события партии: входящие сообщения, уход участника
+    # и закрытие сессии — всё в @inbox для Runner-циклов.
+    def register_session_listeners(session)
+      session.on_reliable { |msg| @inbox << [:reliable, msg] }
+      session.on_participant_left { |participant, _reason| @inbox << [:participant_left, participant] }
+      session.on_closed { |reason| @inbox << [:session_closed, reason] }
+    end
+
+    # Настройки партии уходят гостю через session_metadata сессии — JSON.
+    def settings_payload(variant, distance, deck_mode, deck_copies)
+      { 'variant' => variant.to_s, 'distance_target' => distance,
+        'deck_mode' => deck_mode.to_s, 'deck_copies' => deck_copies }
+    end
+
+    def parse_settings(settings)
+      settings ||= {}
+      variant = (settings['variant'] || 'cars').to_sym
+      distance = (settings['distance_target'] || 1000).to_i
+      deck_mode = (settings['deck_mode'] || 'shared').to_sym
+      deck_copies = (settings['deck_copies'] || 1).to_i
+      [variant, distance, deck_mode, deck_copies]
+    end
+
+    def parse_packet(data)
+      JSON.parse(data.to_s.dup.force_encoding(Encoding::UTF_8))
+    rescue JSON::ParserError, TypeError
+      nil
+    end
+
+    def packet_type(data)
+      pkt = parse_packet(data)
+      pkt && pkt['type']
+    end
+
+    # Ожидание нужного события в Runner: F2/F4 активны, Escape — отмена,
+    # timeout секунд — выход по таймауту. Блок получает событие [kind,
+    # payload] и возвращает true, когда событие «наше». Найденное событие
+    # удаляется из очереди, чтобы не перехватывалось повторно. Возвращает
+    # [kind, payload], :timeout или :cancelled.
+    def wait_for_events(timeout: 60, cancel_text: _('Cancel waiting?'))
       runner = Runner.new
       runner.on_key(KEY_F2) { safely { say_last_move } }
       runner.on_key(KEY_F4) { safely { say_status } }
@@ -290,7 +336,7 @@ module MileByMileElten
       runner.after(timeout) { |current| current.stop(:timeout) }
       found = nil
       runner.on_tick do |current|
-        i = @inbox.index { |user, pkt| yield(user, pkt) }
+        i = @inbox.index { |event| yield(event) }
         next unless i
 
         found = @inbox.delete_at(i)
@@ -298,6 +344,22 @@ module MileByMileElten
       end
       runner.run
       found
+    end
+
+    # Завершение сессии партии: хост закрывает её для всех, гость просто
+    # покидает. Идемпотентно — безопасно звать из любого места выхода.
+    def teardown_session
+      session = @session
+      @session = nil
+      return unless session
+
+      if @mp_host
+        session.close
+      else
+        session.leave
+      end
+    rescue StandardError
+      nil
     end
 
     def multiplayer_menu
@@ -319,8 +381,9 @@ module MileByMileElten
       end
     end
 
-    # Хост: ввести ник соперника → проверить карточку → пригласить → ждать
-    # accept → собрать игру → старт. Возвращает :played или :cancelled.
+    # Хост: ввести ник соперника → проверить карточку → создать сессию и
+    # пригласить → дождаться accept → собрать игру → старт. Настройки уходят
+    # гостю через session_metadata. Возвращает :played или :cancelled.
     def host_game
       nick = input_text(_('Opponent nickname'), escapable: true, text: '')
       return :cancelled if nick.nil? || nick.strip.empty?
@@ -343,19 +406,61 @@ module MileByMileElten
       return :cancelled if settings.nil?
 
       variant, distance, deck_mode, deck_copies = settings
-      @room = new_room
-      @program.signal(nick, { room: @room, type: 'invite', variant: variant,
-                              distance_target: distance, deck_mode: deck_mode, deck_copies: deck_copies })
+      session =
+        begin
+          communication_endpoint.create_session(
+            metadata: settings_payload(variant, distance, deck_mode, deck_copies),
+            capacity: 2
+          )
+        rescue StandardError
+          alert(_('Cannot connect to the multiplayer server.'), false)
+          return :cancelled
+        end
+      @session = session
+      @mp_host = true
+      register_session_listeners(session)
 
-      result = wait_for_signals(cancel_text: _('Cancel waiting?')) do |user, pkt|
-        (pkt[:type] == 'accept' || pkt[:type] == 'decline') && user == nick && pkt[:room] == @room
+      invitation =
+        begin
+          session.invite(nick)
+        rescue StandardError
+          alert(_('Cannot invite %{nick}.') % { nick: nick }, false)
+          teardown_session
+          return :cancelled
+        end
+
+      # Ждём, пока гость примет приглашение: статус инвайта меняется на
+      # :accepted, а в сессии появляется второй участник.
+      status = nil
+      runner = Runner.new
+      runner.on_key(KEY_F2) { safely { say_last_move } }
+      runner.on_key(KEY_F4) { safely { say_status } }
+      runner.on_key(:key_escape) { |current| current.stop(:cancelled) if confirm(_('Cancel waiting?')) }
+      runner.after(60) { |current| current.stop(:timeout) }
+      runner.on_tick do |current|
+        case invitation.status
+        when :accepted
+          status = :accepted if session.participants.size >= 2
+          current.stop if status
+        when :rejected, :cancelled
+          status = :rejected
+          current.stop
+        end
+        if @inbox.any? { |kind, _| kind == :session_closed || kind == :participant_left }
+          status = :cancelled
+          current.stop
+        end
       end
-      if result.nil? || result == :timeout || result == :cancelled
+      status = runner.run || status
+      case status
+      when :accepted
+      when :timeout, :cancelled, nil
         alert(_('No response from %{nick}.') % { nick: nick }, false)
+        teardown_session
         return :cancelled
-      end
-      if result[1][:type] == 'decline'
+      when :rejected
         alert(_('%{nick} declined the invitation.') % { nick: nick }, false)
+        teardown_session
         return :cancelled
       end
 
@@ -368,7 +473,7 @@ module MileByMileElten
       @game = build_mp_game([@human, @opponent], variant, distance, deck_mode, deck_copies, seed)
       @move_history = []
 
-      @program.signal(nick, { room: @room, type: 'start', seed: seed, first: @game.current_index })
+      send_mp_json('type' => 'start', 'seed' => seed, 'first' => @game.current_index)
 
       @audio.welcome
       alert(start_announcement_mp, false)
@@ -378,34 +483,49 @@ module MileByMileElten
     end
 
     # Гость: ждать invite → принять/отклонить → ждать start → собрать игру.
+    # Настройки хоста читаем из session_metadata приглашения, ник хоста — из
+    # sender (не из введённого текста).
     def wait_for_invite
-      result = wait_for_signals(cancel_text: _('Exit waiting for invitations?')) do |_user, pkt|
-        pkt[:type] == 'invite'
+      register_invitation_listener
+      result = wait_for_events(cancel_text: _('Exit waiting for invitations?')) do |kind, _payload|
+        kind == :invitation
       end
       return :cancelled if result.nil? || result == :timeout || result == :cancelled
 
-      host_nick, pkt = result
-      variant = (pkt[:variant] || :cars).to_sym
-      distance = pkt[:distance_target] || 1000
-      deck_mode = (pkt[:deck_mode] || :shared).to_sym
-      deck_copies = (pkt[:deck_copies] || 1).to_i
-      @room = pkt[:room]
+      _kind, invitation = result
+      host_nick = invitation.sender.user
+      variant, distance, deck_mode, deck_copies = parse_settings(invitation.session_metadata)
 
       invite_text = (_('%{nick} invites you: %{settings}. Accept?') %
                      { nick: host_nick, settings: describe_settings(variant, distance, deck_mode, deck_copies) })
       unless confirm(invite_text)
-        @program.signal(host_nick, { room: @room, type: 'decline' })
+        invitation.reject
         return :cancelled
       end
-      @program.signal(host_nick, { room: @room, type: 'accept' })
 
-      start_res = wait_for_signals(timeout: 120, cancel_text: _('Cancel waiting for the start?')) do |user, p2|
-        p2[:type] == 'start' && p2[:room] == @room && user == host_nick
+      session =
+        begin
+          invitation.accept
+        rescue StandardError
+          alert(_('Cannot accept the invitation.'), false)
+          return :cancelled
+        end
+      @session = session
+      @mp_host = false
+      register_session_listeners(session)
+
+      start_res = wait_for_events(timeout: 120, cancel_text: _('Cancel waiting for the start?')) do |kind, payload|
+        kind == :reliable && packet_type(payload.data) == 'start'
       end
-      return :cancelled if start_res.nil? || start_res == :timeout || start_res == :cancelled
+      if start_res.nil? || start_res == :timeout || start_res == :cancelled
+        teardown_session
+        return :cancelled
+      end
 
-      start = start_res[1]
-      seed = start[:seed] || rand(2**31)
+      start = parse_packet(start_res[1].data)
+      return :cancelled if start.nil?
+
+      seed = start['seed'] || rand(2**31)
       @variant = variant
       @audio.variant = variant
       @multiplayer = true
@@ -414,9 +534,10 @@ module MileByMileElten
       @game = build_mp_game([@opponent, @human], variant, distance, deck_mode, deck_copies, seed)
       @move_history = []
 
-      unless @game.current_index == start[:first]
+      unless @game.current_index == start['first']
         alert(_('The game is out of sync. Return to the menu.'), false)
         @multiplayer = false
+        teardown_session
         return :cancelled
       end
 
@@ -450,7 +571,9 @@ module MileByMileElten
     end
 
     # Цикл партии мультиплеера: ходит тот, кому по движку принадлежит ход.
-    # :aborted — игрок вышел (Escape, таймаут, соперник ушёл).
+    # :aborted — игрок вышел (Escape, таймаут, соперник ушёл). Сессия
+    # закрывается в любом случае: на выходе — bye + закрытие, на финише —
+    # просто закрытие.
     def finish_mp_rounds
       aborted = false
       until @game.finished?
@@ -467,6 +590,7 @@ module MileByMileElten
       else
         announce_mp_result
       end
+      teardown_session
     end
 
     # Ход игрока в мультиплеере: как human_turn, но ход уходит сопернику.
@@ -505,17 +629,32 @@ module MileByMileElten
     end
 
     # Ход соперника: ждём move, применяем к своему движку, озвучиваем.
+    # Выход соперника видим как bye, участник_left или закрытие сессии.
     def mp_opponent_turn
-      result = wait_for_signals(timeout: 300, cancel_text: _('End the game?')) do |_user, pkt|
-        (pkt[:type] == 'move' || pkt[:type] == 'bye') && pkt[:room] == @room
+      result = wait_for_events(timeout: 300, cancel_text: _('End the game?')) do |kind, payload|
+        case kind
+        when :reliable
+          type = packet_type(payload.data)
+          type == 'move' || type == 'bye'
+        when :participant_left, :session_closed
+          true
+        else
+          false
+        end
       end
       return :aborted if result.nil? || result == :timeout || result == :cancelled
 
-      pkt = result[1]
-      return :aborted if pkt[:type] == 'bye'
+      kind, payload = result
+      case kind
+      when :participant_left, :session_closed
+        :aborted
+      when :reliable
+        pkt = parse_packet(payload.data)
+        return :aborted if pkt.nil? || pkt['type'] == 'bye'
 
-      apply_opponent_move(pkt)
-      nil
+        apply_opponent_move(pkt)
+        nil
+      end
     end
 
     # Применить ход соперника к локальному движку и озвучить, как в ухе.
@@ -527,7 +666,7 @@ module MileByMileElten
         target_was_running: @human.car.running?,
         target_safeties: @human.car.safeties.size
       }
-      result = @game.apply_move(pkt[:card_index], pkt[:target] == 'opponent' ? :opponent : nil)
+      result = @game.apply_move(pkt['card_index'], pkt['target'] == 'opponent' ? :opponent : nil)
       card = @game.discard_pile.last
       target = card.opponent_only? ? @human : nil
       play_card_audio(card, result, @opponent, target, ctx)
@@ -539,11 +678,19 @@ module MileByMileElten
 
     def send_mp_move(card_index, card)
       target = card.opponent_only? ? 'opponent' : nil
-      @program.signal(@opponent.name, { room: @room, type: 'move', card_index: card_index, target: target })
+      send_mp_json('type' => 'move', 'card_index' => card_index, 'target' => target)
     end
 
     def send_mp_bye
-      @program.signal(@opponent.name, { room: @room, type: 'bye' })
+      send_mp_json('type' => 'bye')
+    end
+
+    # Отправка пакета партии через надёжный канал сессии (JSON). Ошибка
+    # отправки не роняет ход: выход соперник увидит по закрытию сессии.
+    def send_mp_json(payload)
+      @session.send_reliable(JSON.generate(payload))
+    rescue StandardError
+      nil
     end
 
     def announce_mp_result
@@ -555,10 +702,6 @@ module MileByMileElten
       else
         alert(_('The deck ran out. Draw.'), true)
       end
-    end
-
-    def new_room
-      format('mp-%x-%x', Time.now.to_i, rand(2**31))
     end
 
     def user_card(nick)

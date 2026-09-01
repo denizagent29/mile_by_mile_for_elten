@@ -35,17 +35,4 @@ class ProgramMileByMile < Program
   ensure
     finish
   end
-
-  # Мультиплеер: сигналы. В базе Program signal/signaled могут быть
-  # protected — переопределяем как public, чтобы приём из loop.rb ($scene.
-  # signaled) и отправка из UI работали в любом случае.
-  public
-
-  def signal(user, packet)
-    super
-  end
-
-  def signaled(user, packet)
-    @ui&.handle_signal(user, packet)
-  end
 end
